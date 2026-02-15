@@ -197,13 +197,13 @@ export function RecurringInvoiceForm({
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {/* Column Headers */}
-                    <div className="hidden sm:grid gap-4 sm:grid-cols-12 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        <div className="sm:col-span-5">Description</div>
-                        <div className="sm:col-span-1">Qty</div>
-                        <div className="sm:col-span-2">Price</div>
-                        <div className="sm:col-span-1">Tax %</div>
-                        <div className="sm:col-span-2 text-right">Amount</div>
-                        <div className="sm:col-span-1"></div>
+                    <div className="hidden sm:grid gap-4 sm:grid-cols-[3fr_1fr_1fr_1fr_1fr_min-content] text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        <div>Description</div>
+                        <div>Qty</div>
+                        <div>Price</div>
+                        <div>Tax %</div>
+                        <div className="text-right">Amount</div>
+                        <div></div>
                     </div>
                     {fields.map((field, index) => {
                         const qty = items[index]?.quantity || 0;
@@ -212,8 +212,8 @@ export function RecurringInvoiceForm({
                         const lineAmount = qty * price;
                         const lineTax = lineAmount * (tax / 100);
                         return (
-                            <div key={field.id} className="grid gap-4 sm:grid-cols-12 items-start">
-                                <div className="sm:col-span-5 space-y-2">
+                            <div key={field.id} className="grid gap-4 sm:grid-cols-[3fr_1fr_1fr_1fr_1fr_min-content] items-start">
+                                <div className="space-y-2">
                                     <Label className="text-xs text-muted-foreground sm:hidden">Description</Label>
                                     <Input
                                         {...register(`items.${index}.description`)}
@@ -223,14 +223,14 @@ export function RecurringInvoiceForm({
                                         <p className="text-xs text-red-500">{errors.items[index]?.description?.message}</p>
                                     )}
                                 </div>
-                                <div className="sm:col-span-1 space-y-2">
+                                <div className="space-y-2">
                                     <Label className="text-xs text-muted-foreground sm:hidden">Qty</Label>
                                     <Input
                                         type="number"
                                         {...register(`items.${index}.quantity`, { valueAsNumber: true })}
                                     />
                                 </div>
-                                <div className="sm:col-span-2 space-y-2">
+                                <div className="space-y-2">
                                     <Label className="text-xs text-muted-foreground sm:hidden">Price</Label>
                                     <Input
                                         type="number"
@@ -238,7 +238,7 @@ export function RecurringInvoiceForm({
                                         {...register(`items.${index}.unitPrice`, { valueAsNumber: true })}
                                     />
                                 </div>
-                                <div className="sm:col-span-1 space-y-2">
+                                <div className="space-y-2">
                                     <Label className="text-xs text-muted-foreground sm:hidden">Tax %</Label>
                                     <Input
                                         type="number"
@@ -246,13 +246,13 @@ export function RecurringInvoiceForm({
                                         {...register(`items.${index}.taxRate`, { valueAsNumber: true })}
                                     />
                                 </div>
-                                <div className="sm:col-span-2 pt-2 text-right space-y-1">
+                                <div className="pt-2 text-right space-y-1">
                                     <div className="text-sm font-medium">${lineAmount.toFixed(2)}</div>
                                     {tax > 0 && (
                                         <div className="text-xs text-muted-foreground">+${lineTax.toFixed(2)} tax</div>
                                     )}
                                 </div>
-                                <div className="sm:col-span-1 pt-2">
+                                <div className="pt-2">
                                     <Button
                                         type="button"
                                         variant="ghost"
