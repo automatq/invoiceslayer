@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-import { motion, AnimatePresence, useAnimate } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { Loader2, Check } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -48,151 +48,90 @@ interface ButtonProps
   success?: boolean
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({
-    className,
-    variant,
-    size,
-    asChild = false,
-    loading: loadingProp,
-    success: successProp,
-    children,
-    disabled,
-    onClick,
-    ...props
-  }, ref) => {
-    // If asChild is true, we simply render the Slot.
-    // Note: Animations might not work perfectly with asChild depending on what the child is,
-    // but typically asChild is used for layout/links where loading state isn't primary.
-    if (asChild) {
-      return (
-        <Slot
-          ref={ref}
-          className={cn(buttonVariants({ variant, size, className }))}
-          {...props}
-        >
-          {children}
-        </Slot>
-      )
-    }
-
-    const [scope, animate] = useAnimate()
-    const [isLoading, setIsLoading] = React.useState(false)
-    const [isSuccess, setIsSuccess] = React.useState(false)
-
-    // Sync with external props
-    React.useEffect(() => {
-      if (loadingProp !== undefined) {
-        if (loadingProp) animateLoading()
-        // If we stop loading and success isn't true, we ostensibly go back to normal
-        // implicitly handled by logic below via state
-      }
-    }, [loadingProp])
-
-    React.useEffect(() => {
-      // If success prop is passed, trigger success animation
-      if (successProp) {
-        animateSuccess()
-      }
-    }, [successProp])
-
-
-    const animateLoading = async () => {
-      setIsLoading(true)
-      // We animate the loader in
-      await animate(
-        ".loader-container",
-        { width: "auto", opacity: 1, scale: 1 },
-        { duration: 0.2 }
-      )
-    }
-
-    const animateSuccess = async () => {
-      setIsLoading(false)
-      setIsSuccess(true)
-
-      // Animate loader out if it was visible
-      await animate(
-        ".loader-container",
-        { width: 0, opacity: 0, scale: 0 },
-        { duration: 0.2 }
-      )
-
-      // Animate success in
-      await animate(
-        ".success-container",
-        { width: "auto", opacity: 1, scale: 1 },
-        { duration: 0.2 }
-      )
-
-      // Wait a bit
-      setTimeout(async () => {
-        // Animate success out
-        if (scope.current) { // Check if still mounted
-          await animate(
-            ".success-container",
-            { width: 0, opacity: 0, scale: 0 },
-            { duration: 0.2 }
-          )
-          setIsSuccess(false)
-        }
-      }, 2000)
-    }
-
-    const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
-      if (onClick) {
-        // If the click handler returns a promise, we can auto-trigger loading
-        const result = onClick(e) as any
-        if (result && result instanceof Promise) {
-          animateLoading()
-          try {
-            await result
-            animateSuccess()
-          } catch (error) {
-            // If error, stop loading
-            setIsLoading(false)
-            animate(
-              ".loader-container",
-              { width: 0, opacity: 0, scale: 0 },
-              { duration: 0.2 }
-            )
-          }
-        }
-      }
-    }
-
-    // Determine effective loading state for disabled attribute
-    const effectiveLoading = loadingProp || isLoading
-
+function Button({
+  className,
+  variant = "default",
+  size = "default",
+  asChild = false,
+  loading = false,
+  success = false,
+  children,
+  disabled,
+  ...props
+}: ButtonProps) {
+  if (asChild) {
     return (
-      <motion.button
-        ref={scope}
+      <Slot
+        data-slot="button"
+        data-variant={variant}
+        data-size={size}
         className={cn(buttonVariants({ variant, size, className }))}
-        disabled={disabled || effectiveLoading}
-        onClick={handleClick}
-        layout
-        {...(props as any)} // Cast to any to avoid framer-motion interactions with strict HTML props
+        {...props}
       >
-        <motion.div className="loader-container overflow-hidden flex items-center justify-center"
-          initial={{ width: 0, opacity: 0, scale: 0 }}
-          style={{ width: loadingProp ? "auto" : 0, opacity: loadingProp ? 1 : 0, scale: loadingProp ? 1 : 0 }} // Hydration Safety
-        >
-          <Loader2 className="animate-spin mr-2" size={16} />
-        </motion.div>
-
-        <motion.div className="success-container overflow-hidden flex items-center justify-center"
-          initial={{ width: 0, opacity: 0, scale: 0 }}
-        >
-          <Check className="mr-2" size={16} />
-        </motion.div>
-
-        <motion.span layout className="flex items-center justify-center">
-          {children}
-        </motion.span>
-      </motion.button>
+        {children}
+      </Slot>
     )
   }
-)
-Button.displayName = "Button"
+
+  const {
+    onClick,
+    onDrag,
+    onDragStart,
+    onDragEnd,
+    onAnimationStart,
+    onAnimationEnd,
+    ...buttonProps
+  } = props
+
+  return (
+    <motion.button
+      data-slot="button"
+      data-variant={variant}
+      data-size={size}
+      disabled={disabled || loading}
+      className={cn(buttonVariants({ variant, size, className }))}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      {...buttonProps}
+    >
+      <AnimatePresence mode="wait">
+        {success ? (
+          <motion.div
+            key="success"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="flex items-center gap-2"
+          >
+            <Check className="size-4" />
+            <span>Success</span>
+          </motion.div>
+        ) : loading ? (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="flex items-center gap-2"
+          >
+            <Loader2 className="size-4 animate-spin" />
+            <span>Loading...</span>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="content"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex items-center gap-2"
+          >
+            {children}
+          </motion.div>
+        )
+        }
+      </AnimatePresence>
+    </motion.button>
+  )
+}
 
 export { Button, buttonVariants }
