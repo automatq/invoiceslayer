@@ -1,7 +1,7 @@
-"use client";
+
 
 import { Notifications } from "@/components/Notifications";
-import { UserButton } from "@/components/UserButton"; // Assuming we might want this later, but for now just Notifications 
+import { UserButton } from "./UserButton";
 
 export function Header() {
     return (
