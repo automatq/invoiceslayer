@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { SidebarAvatar } from "@/components/SidebarAvatar";
 import { FileText, LayoutDashboard, Settings, UserCircle, Receipt, History, ChartBar } from "lucide-react";
+import { Header } from "@/components/Header";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
     const links = [
@@ -87,8 +88,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     </div>
                 </SidebarBody>
             </Sidebar>
-            <main className="flex flex-1">
-                <div className="p-2 md:p-10 rounded-tl-2xl border border-border bg-background flex flex-col gap-2 flex-1 w-full h-full overflow-y-auto">
+            <main className="flex flex-col flex-1 h-screen overflow-hidden">
+                <Header />
+                <div className="flex-1 overflow-y-auto p-2 md:p-10 rounded-tl-2xl border border-border bg-background flex flex-col gap-2">
                     {children}
                 </div>
             </main>
