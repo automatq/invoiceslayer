@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# InvoiceMaster
 
-## Getting Started
+Self-hosted invoicing application built for ZimaOS.
 
-First, run the development server:
+## Features
+- Client Management (CRM)
+- Quote Generation & PDF Export
+- Invoice Generation & PDF Export
+- Dashboard Overview
+- Dark Mode Support
+
+## Deployment on ZimaOS
+
+1. **Build the Image** (if not using a pre-built registry):
+   You can build the image locally on your ZimaOS device if you have terminal access.
+   ```bash
+   docker build -t invoicemaster:latest .
+   ```
+
+2. **Install via Docker Compose**:
+   - Go to ZimaOS Dashboard.
+   - Open the App Store or Custom App install.
+   - Import the `docker-compose.yml` file content.
+   - Ensure the volume mapping for `/app/prisma/dev.db` points to a persistent location on your ZimaOS drive (e.g., `/DATA/AppData/invoicemaster/dev.db`).
+
+   **Note on Database**:
+   The app expects `dev.db` to exist. On the first run, if the database file is missing in the volume, the app might crash if it expects it.
+   Ideally, place an empty `dev.db` or let the app generate it.
+   Since the Dockerfile copies the local `prisma` folder (which might contain your local `dev.db` if you ran `prisma migrate`), it will start with that.
+   For persistent storage, map a volume.
+
+## Development
 
 ```bash
+npm install
+npx prisma migrate dev
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

@@ -1,0 +1,28 @@
+version: "3"
+
+services:
+  invoicemaster:
+    container_name: invoicemaster
+    build: .
+    image: invoicemaster:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:/app/prisma/dev.db
+    volumes:
+      - ./prisma/dev.db:/app/prisma/dev.db
+    # For ZimaOS/CasaOS metadata (optional but helpful)
+    x-casaos:
+      envs:
+        - container: DATABASE_URL
+          description: "Database URL"
+      ports:
+        - container: "3000"
+          description: "Web UI"
+      volumes:
+        - container: "/app/prisma/dev.db"
+          description: "SQLite Database File"
+      architectures:
+        - amd64
+        - arm64
