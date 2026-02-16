@@ -16,8 +16,8 @@ export async function sendInvoiceEmail(invoiceId: string, customSubject?: string
         }
 
         const settings = await prisma.setting.findFirst();
-        const companyName = settings?.companyName || "InvoiceMaster";
-        // const fromEmail = settings?.companyEmail || "noreply@invoicemaster.app";
+        const companyName = settings?.companyName || "InvoiceSlayer";
+        // const fromEmail = settings?.companyEmail || "noreply@invoiceslayer.app";
 
         // Determine Base URL (simplistic for now, preferably from env)
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -166,7 +166,7 @@ export async function sendQuoteEmail(quoteId: string) {
         }
 
         const settings = await prisma.setting.findFirst();
-        const companyName = settings?.companyName || "InvoiceMaster";
+        const companyName = settings?.companyName || "InvoiceSlayer";
 
         const itemsHtml = quote.items
             .map(

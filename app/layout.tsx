@@ -13,7 +13,7 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: "InvoiceMaster",
+  title: "InvoiceSlayer",
   description: "Professional invoicing application",
 };
 

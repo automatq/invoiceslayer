@@ -157,7 +157,7 @@ export default async function PublicInvoicePage({ params }: PageProps) {
                 </Card>
 
                 <div className="text-center text-xs text-muted-foreground mt-8">
-                    Powered by InvoiceMaster
+                    Powered by InvoiceSlayer
                 </div>
             </div>
         </div>

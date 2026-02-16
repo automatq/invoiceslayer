@@ -76,7 +76,7 @@ export default function OnboardingPage() {
         <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-neutral-900 p-4">
             <Card className="w-full max-w-md">
                 <CardHeader>
-                    <CardTitle>Welcome to InvoiceMaster</CardTitle>
+                    <CardTitle>Welcome to InvoiceSlayer</CardTitle>
                     <CardDescription>Let's get you set up with your company details.</CardDescription>
                 </CardHeader>
                 <form onSubmit={handleSubmit(onSubmit)}>

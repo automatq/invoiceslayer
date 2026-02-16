@@ -3,7 +3,7 @@ import { getCalendarEvents } from "@/app/actions/calendar";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Calendar | InvoiceMaster",
+    title: "Calendar | InvoiceSlayer",
     description: "Financial calendar overview",
 };
 

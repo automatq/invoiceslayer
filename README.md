@@ -1,4 +1,4 @@
-# InvoiceMaster
+# InvoiceSlayer
 
 Self-hosted invoicing application built for ZimaOS.
 
@@ -14,14 +14,14 @@ Self-hosted invoicing application built for ZimaOS.
 1. **Build the Image** (if not using a pre-built registry):
    You can build the image locally on your ZimaOS device if you have terminal access.
    ```bash
-   docker build -t invoicemaster:latest .
+   docker build -t invoiceslayer:latest .
    ```
 
 2. **Install via Docker Compose**:
    - Go to ZimaOS Dashboard.
    - Open the App Store or Custom App install.
    - Import the `docker-compose.yml` file content.
-   - Ensure the volume mapping for `/app/prisma/dev.db` points to a persistent location on your ZimaOS drive (e.g., `/DATA/AppData/invoicemaster/dev.db`).
+   - Ensure the volume mapping for `/app/prisma/dev.db` points to a persistent location on your ZimaOS drive (e.g., `/DATA/AppData/invoiceslayer/dev.db`).
 
    **Note on Database**:
    The app expects `dev.db` to exist. On the first run, if the database file is missing in the volume, the app might crash if it expects it.

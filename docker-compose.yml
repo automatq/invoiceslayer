@@ -1,10 +1,10 @@
 version: "3"
 
 services:
-  invoicemaster:
-    container_name: invoicemaster
+  invoiceslayer:
+    container_name: invoiceslayer
     build: .
-    image: invoicemaster:latest
+    image: invoiceslayer:latest
     restart: unless-stopped
     ports:
       - "3000:3000"

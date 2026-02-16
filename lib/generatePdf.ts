@@ -19,7 +19,7 @@ function addPoweredBy(doc: jsPDF) {
         doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);
         doc.setFont("helvetica", "italic");
-        doc.text("powered by invoicemaster", 160, 285);
+        doc.text("powered by invoiceslayer", 160, 285);
     }
 }
 
@@ -130,7 +130,7 @@ export function generateInvoicePDF(invoice: any, settings?: CompanySettings | nu
     const template = settings?.invoiceTemplate || "modern";
 
     const company: CompanySettings = settings || {
-        companyName: "InvoiceMaster",
+        companyName: "InvoiceSlayer",
         companyEmail: "",
     };
 
@@ -228,7 +228,7 @@ export function generateQuotePDF(quote: any, settings?: CompanySettings | null) 
     const template = settings?.quoteTemplate || "modern";
 
     const company: CompanySettings = settings || {
-        companyName: "InvoiceMaster",
+        companyName: "InvoiceSlayer",
         companyEmail: "",
     };
 
