@@ -15,7 +15,7 @@ export async function sendInvoiceEmail(invoiceId: string) {
             return { success: false, message: "Invoice not found" };
         }
 
-        const settings = await prisma.settings.findFirst();
+        const settings = await prisma.setting.findFirst();
         const companyName = settings?.companyName || "InvoiceMaster";
         const fromEmail = settings?.companyEmail || "noreply@invoicemaster.app";
 
@@ -148,7 +148,7 @@ export async function sendQuoteEmail(quoteId: string) {
             return { success: false, message: "Quote not found" };
         }
 
-        const settings = await prisma.settings.findFirst();
+        const settings = await prisma.setting.findFirst();
         const companyName = settings?.companyName || "InvoiceMaster";
 
         const itemsHtml = quote.items

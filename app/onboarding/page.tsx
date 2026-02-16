@@ -20,8 +20,8 @@ const SettingsSchema = z.object({
     companyPhone: z.string().optional(),
     currency: z.string().min(1, "Currency is required"),
     defaultTaxRate: z.number().min(0).max(100),
-    invoiceTemplate: z.string().default("modern"),
-    quoteTemplate: z.string().default("modern"),
+    invoiceTemplate: z.string(),
+    quoteTemplate: z.string(),
 });
 
 type SettingsFormValues = z.infer<typeof SettingsSchema>;
