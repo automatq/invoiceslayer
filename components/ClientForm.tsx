@@ -204,7 +204,7 @@ export function ClientForm({ initialData }: ClientFormProps) {
                         />
                     </div>
                 </CardContent>
-                <CardFooter className="flex justify-end">
+                <CardFooter className="flex justify-end mt-4">
                     <Button type="submit" loading={isSubmitting}>
                         {initialData ? "Update Client" : "Save Client"}
                     </Button>
