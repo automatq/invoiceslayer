@@ -11,7 +11,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { SidebarAvatar } from "@/components/SidebarAvatar";
-import { FileText, LayoutDashboard, Settings, UserCircle, Receipt, History, ChartBar } from "lucide-react";
+import { FileText, LayoutDashboard, Settings, UserCircle, Receipt, History, ChartBar, Calendar } from "lucide-react";
 
 export function DashboardClientLayout({
     children,
@@ -54,6 +54,13 @@ export function DashboardClientLayout({
             href: "/recurring",
             icon: (
                 <History className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+            ),
+        },
+        {
+            label: "Calendar",
+            href: "/calendar",
+            icon: (
+                <Calendar className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
             ),
         },
         {
