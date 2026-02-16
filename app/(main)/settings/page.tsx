@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { InteractiveButton } from "@/components/ui/interactive-button";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -151,12 +152,14 @@ export default function SettingsPage() {
                                     alt="Company logo"
                                     className="h-20 w-20 rounded-lg object-cover border border-neutral-200 dark:border-neutral-700"
                                 />
-                                <button
+                                <Button
+                                    variant="destructive"
+                                    size="icon"
                                     onClick={removeLogo}
-                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600 transition-colors"
+                                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
                                 >
                                     <X className="h-3 w-3" />
-                                </button>
+                                </Button>
                             </div>
                         ) : (
                             <div className="h-20 w-20 rounded-lg border-2 border-dashed border-neutral-300 dark:border-neutral-600 flex items-center justify-center">
@@ -302,9 +305,9 @@ export default function SettingsPage() {
                             </SelectContent>
                         </Select>
                     </div>
-                    <Button onClick={handleSave} disabled={isSaving}>
+                    <InteractiveButton onClick={handleSave} disabled={isSaving}>
                         {isSaving ? "Saving..." : "Save Changes"}
-                    </Button>
+                    </InteractiveButton>
                 </CardContent>
             </Card>
         </div>

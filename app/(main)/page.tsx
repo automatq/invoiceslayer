@@ -10,27 +10,43 @@ import { RecentSales } from "@/components/RecentSales";
 import { getInvoices } from "@/app/actions/invoices";
 import { getClients } from "@/app/actions/clients";
 import { getQuotes } from "@/app/actions/quotes";
+import { getRevenueByMonth } from "@/app/actions/reports";
 import { DollarSign, Clock, Users, FileText, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 import { redirect } from "next/navigation";
 import { getSettings } from "@/app/actions/settings";
+import { AccountingBasisToggle } from "@/components/reports/AccountingBasisToggle";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams: { basis?: string } }) {
   const settings = await getSettings();
   if (!settings) {
     redirect("/onboarding");
   }
 
+  const basis = (searchParams?.basis === "cash") ? "cash" : "accrual";
+  const currentYear = new Date().getFullYear();
+
   const invoices = await getInvoices();
   const clients = await getClients();
   const quotes = await getQuotes();
+  const revenueData = await getRevenueByMonth(currentYear, basis as "accrual" | "cash");
 
   // Metrics
-  const totalRevenue = invoices.reduce((acc: number, inv: any) => acc + (inv.status === "PAID" ? inv.total : 0), 0);
+  const totalRevenue = invoices.reduce((acc: number, inv: any) => {
+    if (basis === "cash") {
+      return acc + (inv.amountPaid || 0);
+    } else {
+      // Accrual: Sum of all finalized invoices
+      if (["PAID", "PARTIAL", "SENT", "OVERDUE"].includes(inv.status)) {
+        return acc + inv.total;
+      }
+      return acc;
+    }
+  }, 0);
   const pendingInvoices = invoices.filter((inv: any) => inv.status === "PENDING" || inv.status === "SENT").length;
   const overdueInvoices = invoices.filter((inv: any) => inv.status === "OVERDUE").length;
   const activeClients = clients.length; // Simplified for now
@@ -39,7 +55,7 @@ export default async function DashboardPage() {
   // Recent Sales Data (Paid Invoices)
   const recentSales = invoices
     .filter((inv: any) => inv.status === "PAID" || inv.status === "SENT" || inv.status === "PENDING") // Show all for demo if no paid
-    .slice(0, 5)
+    .slice(0, 25)
     .map((inv: any) => ({
       id: inv.id,
       name: inv.client.name,
@@ -48,40 +64,30 @@ export default async function DashboardPage() {
       fallback: inv.client.name.substring(0, 2).toUpperCase(),
     }));
 
-  // Overview Data — track revenue (paid invoices) and quotes by month
-  const overviewData = [
-    { name: "Jan", revenue: 0, quotes: 0 },
-    { name: "Feb", revenue: 0, quotes: 0 },
-    { name: "Mar", revenue: 0, quotes: 0 },
-    { name: "Apr", revenue: 0, quotes: 0 },
-    { name: "May", revenue: 0, quotes: 0 },
-    { name: "Jun", revenue: 0, quotes: 0 },
-    { name: "Jul", revenue: 0, quotes: 0 },
-    { name: "Aug", revenue: 0, quotes: 0 },
-    { name: "Sep", revenue: 0, quotes: 0 },
-    { name: "Oct", revenue: 0, quotes: 0 },
-    { name: "Nov", revenue: 0, quotes: 0 },
-    { name: "Dec", revenue: 0, quotes: 0 },
-  ];
+  // Merge Revenue Data with Quotes Data
+  const overviewData = revenueData.map((monthData, index) => {
+    const monthQuotes = quotes.reduce((acc: number, q: any) => {
+      const qDate = new Date(q.date);
+      if (qDate.getFullYear() === currentYear && qDate.getMonth() === index) {
+        return acc + q.total;
+      }
+      return acc;
+    }, 0);
 
-  // Aggregate actual revenue by month
-  invoices.forEach((inv: any) => {
-    if (inv.status === "PAID") {
-      const month = new Date(inv.date).getMonth();
-      overviewData[month].revenue += inv.total;
-    }
-  });
-
-  // Aggregate quotes by month
-  quotes.forEach((q: any) => {
-    const month = new Date(q.date).getMonth();
-    overviewData[month].quotes += q.total;
+    return {
+      name: monthData.name,
+      revenue: monthData.revenue,
+      quotes: monthQuotes,
+    };
   });
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+        <div className="flex items-center space-x-2">
+          <AccountingBasisToggle />
+        </div>
       </div>
 
       {overdueInvoices > 0 && (
@@ -104,7 +110,7 @@ export default async function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
               <p className="text-xs text-muted-foreground">
-                From paid invoices
+                {basis === "cash" ? "Cash collected" : "Total invoiced value"}
               </p>
             </CardContent>
           </Card>
@@ -157,7 +163,7 @@ export default async function DashboardPage() {
           <CardHeader>
             <CardTitle>Overview</CardTitle>
             <CardDescription>
-              Monthly revenue breakdown for the current year.
+              Monthly revenue breakdown for {currentYear}.
             </CardDescription>
           </CardHeader>
           <CardContent className="pl-2">

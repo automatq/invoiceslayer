@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { createNotification } from "@/app/actions/notifications";
 
 export async function getInvoices() {
     return await prisma.invoice.findMany({
@@ -79,7 +80,15 @@ export async function convertQuoteToInvoice(quoteId: string) {
                 data: { status: "ACCEPTED" },
             });
 
-            return invoice;
+            return { id: invoice.id, number: invoice.number };
+        });
+
+        // Trigger Notification
+        await createNotification({
+            type: "SUCCESS",
+            title: "Quote Accepted",
+            message: `Quote ${quote.number} was accepted and converted to Invoice ${result.number}`,
+            link: `/invoices/${result.id}`,
         });
 
         revalidatePath("/invoices");

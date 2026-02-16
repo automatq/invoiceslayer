@@ -83,6 +83,11 @@ function Button({
     ...buttonProps
   } = props
 
+  const isIcon = size?.toString().includes("icon");
+  const isGhost = variant === "ghost" || variant === "link";
+  const isCalendar = (props as any)["data-day"] !== undefined;
+  const isSubtle = isIcon || isGhost;
+
   return (
     <motion.button
       data-slot="button"
@@ -90,10 +95,37 @@ function Button({
       data-size={size}
       disabled={disabled || loading}
       className={cn(buttonVariants({ variant, size, className }))}
-      whileTap={{ scale: 0.98 }}
+      whileTap={isCalendar ? {} : { scale: 0.95 }}
+      whileHover={
+        isCalendar
+          ? {}
+          : isSubtle
+            ? { scale: 1.1 }
+            : {
+              scale: 1.05,
+              boxShadow: `0 0 20px 2px color-mix(in srgb, ${variant === "destructive"
+                  ? "var(--destructive)"
+                  : "var(--primary)"
+                }, transparent 70%)`,
+              filter: "brightness(1.1)",
+            }
+      }
+      transition={{ type: "spring", stiffness: 400, damping: 10 }}
       onClick={onClick}
       {...buttonProps}
     >
+      {/* Shimmer Effect - Only for non-subtle, non-calendar buttons */}
+      {!isSubtle && !isCalendar && (
+        <motion.div
+          className="absolute inset-0 -z-10"
+          initial={{ x: "-100%", opacity: 0 }}
+          whileHover={{ x: "100%", opacity: 1 }}
+          transition={{ duration: 0.6, ease: "easeInOut" }}
+        >
+          <div className="h-full w-full bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12" />
+        </motion.div>
+      )}
+
       <AnimatePresence mode="wait">
         {success ? (
           <motion.div
@@ -120,9 +152,6 @@ function Button({
         ) : (
           <motion.div
             key="content"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
             className="flex items-center gap-2"
           >
             {children}

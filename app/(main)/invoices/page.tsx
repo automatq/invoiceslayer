@@ -10,6 +10,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { InteractiveLink } from "@/components/ui/interactive-link";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InvoiceRowActions } from "@/components/InvoiceRowActions";
@@ -23,12 +24,10 @@ export default async function InvoicesPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
-                <Button asChild>
-                    <Link href="/invoices/new">
-                        <Plus className="mr-2 h-4 w-4" />
-                        New Invoice
-                    </Link>
-                </Button>
+                <InteractiveLink href="/invoices/new">
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Invoice
+                </InteractiveLink>
             </div>
 
             <Card>

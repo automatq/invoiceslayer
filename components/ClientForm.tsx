@@ -120,13 +120,15 @@ export function ClientForm({ initialData }: ClientFormProps) {
                                             alt="Client photo"
                                             className="w-20 h-20 rounded-full object-cover border-2 border-border"
                                         />
-                                        <button
+                                        <Button
                                             type="button"
+                                            variant="destructive"
+                                            size="icon"
                                             onClick={removePhoto}
-                                            className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-0.5 hover:bg-destructive/80 transition-colors"
+                                            className="absolute -top-1 -right-1 h-6 w-6 rounded-full"
                                         >
                                             <X className="h-3.5 w-3.5" />
-                                        </button>
+                                        </Button>
                                     </div>
                                 ) : (
                                     <div className="w-20 h-20 rounded-full border-2 border-dashed border-border flex items-center justify-center bg-muted">

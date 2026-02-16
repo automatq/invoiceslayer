@@ -67,6 +67,26 @@
       height: 0;
     }
   }
+
+  --animate-shimmer-slide: shimmer-slide var(--speed) ease-in-out infinite alternate;
+
+  --animate-spin-around: spin-around calc(var(--speed) * 2) infinite linear;
+
+  @keyframes shimmer-slide {
+    to {
+      transform: translate(calc(100cqw - 100%), 0);
+    }
+  }
+
+  @keyframes spin-around {
+    from {
+      transform: translateZ(0) rotate(0deg);
+    }
+
+    to {
+      transform: translateZ(0) rotate(360deg);
+    }
+  }
 }
 
 /* CURSOR-STYLE DARK THEME */

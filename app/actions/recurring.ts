@@ -2,8 +2,10 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { sendInvoiceEmail } from "@/app/actions/email";
 import { z } from "zod";
 import { addWeeks, addMonths, addYears, parseISO } from "date-fns";
+import { createNotification } from "@/app/actions/notifications";
 
 const RecurringInvoiceSchema = z.object({
     clientId: z.string().min(1, "Client is required"),
@@ -123,7 +125,7 @@ export async function processRecurringInvoices() {
 
     for (const recurring of dueRecurring) {
         try {
-            await prisma.$transaction(async (tx) => {
+            const result = await prisma.$transaction(async (tx) => {
                 // 1. Create Invoice
                 const items = JSON.parse(recurring.items);
                 const subtotal = items.reduce((acc: number, item: any) => acc + (item.quantity * item.unitPrice), 0);
@@ -141,13 +143,13 @@ export async function processRecurringInvoices() {
                     nextNumber = `INV-${String(lastNum + 1).padStart(3, "0")}`;
                 }
 
-                await tx.invoice.create({
+                const newInvoice = await tx.invoice.create({
                     data: {
                         number: nextNumber,
                         clientId: recurring.clientId,
                         date: new Date(),
                         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // +30 days
-                        status: "DRAFT", // Or SENT? DRAFT is safer
+                        status: "SENT", // Set to SENT immediately as we will email it
                         subtotal,
                         taxTotal,
                         total,
@@ -187,7 +189,29 @@ export async function processRecurringInvoices() {
                     where: { id: recurring.id },
                     data: { nextRunDate: nextDate },
                 });
+
+                return { id: newInvoice.id, number: newInvoice.number };
             });
+
+            // Email the invoice
+            if (result) {
+                await sendInvoiceEmail(result.id);
+
+                // Fetch client name for notification
+                const client = await prisma.client.findUnique({
+                    where: { id: recurring.clientId },
+                    select: { name: true }
+                });
+
+                // Trigger Notification
+                await createNotification({
+                    type: "INFO",
+                    title: "Recurring Invoice Generated",
+                    message: `Invoice ${result.number} was automatically generated for ${client?.name || 'a client'}`,
+                    link: `/invoices/${result.id}`,
+                });
+            }
+
             processedCount++;
         } catch (e) {
             console.error(`Failed to process recurring invoice ${recurring.id}:`, e);

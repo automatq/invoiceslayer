@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { sendInvoiceEmail } from "@/app/actions/email";
 import { revalidatePath } from "next/cache";
+import { createNotification } from "@/app/actions/notifications";
 
 export async function checkAndSendReminders() {
     try {
@@ -51,10 +52,18 @@ export async function checkAndSendReminders() {
             // So yes, I can send an email here.
 
             if (invoice.client.email && invoice.status !== "DRAFT") {
-                await sendInvoiceEmail(invoice.id); // This sends the standard invoice email. Maybe I need a specific reminder template?
+                await sendInvoiceEmail(invoice.id, `Reminder: Invoice ${invoice.number} is Overdue`);
                 // For now reusing standard email is better than nothing.
                 emailedCount++;
             }
+
+            // Trigger Notification
+            await createNotification({
+                type: "WARNING",
+                title: "Invoice Overdue",
+                message: `Invoice ${invoice.number} for ${invoice.client.name} is now overdue.`,
+                link: `/invoices/${invoice.id}`,
+            });
         }
 
         if (updatedCount > 0) {

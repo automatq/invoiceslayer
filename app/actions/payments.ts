@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { createNotification } from "@/app/actions/notifications";
 
 const PaymentSchema = z.object({
     invoiceId: z.string().min(1, "Invoice ID is required"),
@@ -70,12 +71,20 @@ export async function recordPayment(data: {
                 },
             });
 
-            return payment;
+            return { payment, invoiceNumber: invoice.number };
+        });
+
+        // 3. Trigger Notification
+        await createNotification({
+            type: "SUCCESS",
+            title: "Payment Received",
+            message: `Payment of $${amount.toFixed(2)} received for invoice ${result.invoiceNumber}`,
+            link: `/invoices/${invoiceId}`,
         });
 
         revalidatePath(`/invoices/${invoiceId}`);
         revalidatePath("/invoices");
-        return { success: true, paymentId: result.id };
+        return { success: true, paymentId: result.payment.id };
     } catch (e: any) {
         console.error(e);
         return { success: false, message: e.message || "Failed to record payment" };

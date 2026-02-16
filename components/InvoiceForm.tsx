@@ -7,6 +7,7 @@ import { createInvoice, updateInvoice } from "@/app/actions/invoices";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { InteractiveButton } from "@/components/ui/interactive-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -256,9 +257,9 @@ export function InvoiceForm({ clients, initialData, defaultTaxRate = 13 }: { cli
             </Card>
 
             <div className="flex justify-end">
-                <Button type="submit" loading={isSubmitting}>
+                <InteractiveButton type="submit" loading={isSubmitting}>
                     {initialData ? "Update Invoice" : "Create Invoice"}
-                </Button>
+                </InteractiveButton>
             </div>
         </form>
     );

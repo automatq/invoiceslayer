@@ -4,7 +4,7 @@ import { resend } from "@/lib/resend";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
-export async function sendInvoiceEmail(invoiceId: string) {
+export async function sendInvoiceEmail(invoiceId: string, customSubject?: string) {
     try {
         const invoice = await prisma.invoice.findUnique({
             where: { id: invoiceId },
@@ -17,7 +17,11 @@ export async function sendInvoiceEmail(invoiceId: string) {
 
         const settings = await prisma.setting.findFirst();
         const companyName = settings?.companyName || "InvoiceMaster";
-        const fromEmail = settings?.companyEmail || "noreply@invoicemaster.app";
+        // const fromEmail = settings?.companyEmail || "noreply@invoicemaster.app";
+
+        // Determine Base URL (simplistic for now, preferably from env)
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+        const paymentLink = `${baseUrl}/p/invoice/${invoice.id}`;
 
         const itemsHtml = invoice.items
             .map(
@@ -31,10 +35,12 @@ export async function sendInvoiceEmail(invoiceId: string) {
             )
             .join("");
 
+        const emailSubject = customSubject || `Invoice ${invoice.number} from ${companyName}`;
+
         const { data, error } = await resend.emails.send({
             from: `${companyName} <onboarding@resend.dev>`,
             to: [invoice.client.email],
-            subject: `Invoice ${invoice.number} from ${companyName}`,
+            subject: emailSubject,
             html: `
 <!DOCTYPE html>
 <html>
@@ -55,6 +61,8 @@ export async function sendInvoiceEmail(invoiceId: string) {
         th:not(:first-child) { text-align: right; }
         .total-row { font-size: 18px; font-weight: 700; }
         .footer { background: #f8f9fa; padding: 24px 32px; text-align: center; color: #999; font-size: 12px; }
+        .btn { display: inline-block; background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; margin-top: 20px; }
+        .btn:hover { background-color: #1d4ed8; }
     </style>
 </head>
 <body>
@@ -66,6 +74,10 @@ export async function sendInvoiceEmail(invoiceId: string) {
             <div class="body">
                 <p>Hi ${invoice.client.name},</p>
                 <p>Please find your invoice details below.</p>
+                
+                <div style="text-align: center; margin: 24px 0;">
+                    <a href="${paymentLink}" class="btn" style="color: #ffffff;">Pay Invoice Online</a>
+                </div>
 
                 <div style="margin: 24px 0;">
                     <table>
@@ -105,6 +117,9 @@ export async function sendInvoiceEmail(invoiceId: string) {
                 <p style="margin-top: 32px; color: #666; font-size: 14px;">
                     If you have any questions about this invoice, please don't hesitate to reach out.
                 </p>
+                <p style="text-align: center; margin-top: 20px;">
+                    <a href="${paymentLink}">View invoice in browser</a>
+                </p>
             </div>
             <div class="footer">
                 <p>&copy; ${new Date().getFullYear()} ${companyName}. All rights reserved.</p>
@@ -121,11 +136,13 @@ export async function sendInvoiceEmail(invoiceId: string) {
             return { success: false, message: error.message || "Failed to send email" };
         }
 
-        // Update invoice status to SENT
-        await prisma.invoice.update({
-            where: { id: invoiceId },
-            data: { status: "SENT" },
-        });
+        // Update invoice status to SENT if it was DRAFT
+        if (invoice.status === "DRAFT") {
+            await prisma.invoice.update({
+                where: { id: invoiceId },
+                data: { status: "SENT" },
+            });
+        }
 
         revalidatePath(`/invoices/${invoiceId}`);
         revalidatePath("/invoices");

@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
+import { createNotification } from "@/app/actions/notifications";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: "2026-01-28.clover" as any,
@@ -39,6 +40,12 @@ export async function POST(req: Request) {
             if (invoiceId) {
                 console.log(`Payment succeeded for invoice: ${invoiceId}`);
 
+                // Fetch invoice for number
+                const invoice = await prisma.invoice.findUnique({
+                    where: { id: invoiceId },
+                    select: { number: true }
+                });
+
                 // Update Invoice Status
                 await prisma.invoice.update({
                     where: { id: invoiceId },
@@ -59,6 +66,14 @@ export async function POST(req: Request) {
                         method: "CREDIT_CARD",
                         notes: `Stripe Session: ${session.id}`
                     }
+                });
+
+                // Trigger Notification
+                await createNotification({
+                    type: "SUCCESS",
+                    title: "Stripe Payment Success",
+                    message: `Payment of $${session.amount_total ? (session.amount_total / 100).toFixed(2) : 0} received for invoice ${invoice?.number || invoiceId}`,
+                    link: `/invoices/${invoiceId}`,
                 });
             }
         }

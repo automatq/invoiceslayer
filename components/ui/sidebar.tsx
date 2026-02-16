@@ -4,6 +4,7 @@ import Link, { LinkProps } from "next/link";
 import React, { useState, createContext, useContext } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { IconMenu2, IconX } from "@tabler/icons-react";
+import { Button } from "@/components/ui/button";
 
 interface Links {
   label: string;
@@ -120,10 +121,9 @@ export const MobileSidebar = ({
         {...props}
       >
         <div className="flex justify-end z-20 w-full">
-          <IconMenu2
-            className="text-neutral-800 dark:text-neutral-200"
-            onClick={() => setOpen(!open)}
-          />
+          <Button variant="ghost" size="icon" onClick={() => setOpen(!open)} className="text-neutral-800 dark:text-neutral-200">
+            <IconMenu2 />
+          </Button>
         </div>
         <AnimatePresence>
           {open && (
@@ -140,11 +140,10 @@ export const MobileSidebar = ({
                 className
               )}
             >
-              <div
-                className="absolute right-10 top-10 z-50 text-neutral-800 dark:text-neutral-200"
-                onClick={() => setOpen(!open)}
-              >
-                <IconX />
+              <div className="absolute right-10 top-10 z-50 text-neutral-800 dark:text-neutral-200">
+                <Button variant="ghost" size="icon" onClick={() => setOpen(!open)}>
+                  <IconX />
+                </Button>
               </div>
               {children}
             </motion.div>
@@ -169,7 +168,7 @@ export const SidebarLink = ({
     <Link
       href={link.href}
       className={cn(
-        "flex items-center justify-start gap-2  group/sidebar py-2",
+        "flex items-center justify-start gap-2  group/sidebar py-2 hover:bg-accent hover:text-accent-foreground rounded-md px-2 transition-all",
         className
       )}
       {...props}

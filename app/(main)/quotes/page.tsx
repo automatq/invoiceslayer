@@ -10,6 +10,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { InteractiveLink } from "@/components/ui/interactive-link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -22,12 +23,10 @@ export default async function QuotesPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold tracking-tight">Quotes</h1>
-                <Button asChild>
-                    <Link href="/quotes/new">
-                        <Plus className="mr-2 h-4 w-4" />
-                        New Quote
-                    </Link>
-                </Button>
+                <InteractiveLink href="/quotes/new">
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Quote
+                </InteractiveLink>
             </div>
 
             <Card>

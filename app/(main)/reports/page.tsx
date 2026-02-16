@@ -6,8 +6,11 @@ import { DownloadReportButton } from "@/components/reports/DownloadReportButton"
 
 export const dynamic = "force-dynamic";
 
-export default async function ReportsPage() {
-    const revenueData = await getRevenueByMonth();
+import { AccountingBasisToggle } from "@/components/reports/AccountingBasisToggle";
+
+export default async function ReportsPage({ searchParams }: { searchParams: { basis?: string } }) {
+    const basis = (searchParams?.basis === "cash") ? "cash" : "accrual";
+    const revenueData = await getRevenueByMonth(new Date().getFullYear(), basis as "accrual" | "cash");
     const topCustomers = await getTopCustomers();
     const statusResult = await getInvoiceStatusDistribution();
 
@@ -18,7 +21,8 @@ export default async function ReportsPage() {
                     <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
                     <p className="text-muted-foreground">Analyze your business performance.</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-4">
+                    <AccountingBasisToggle />
                     <DownloadReportButton data={revenueData} filename="revenue_report.csv" />
                 </div>
             </div>

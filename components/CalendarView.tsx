@@ -16,6 +16,7 @@ import {
 } from "date-fns";
 import { ChevronLeft, ChevronRight, FileText, Receipt, RefreshCw, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { InteractiveButton } from "@/components/ui/interactive-button";
 import { cn } from "@/lib/utils";
 import { CalendarEvent } from "@/app/actions/calendar";
 import { Badge } from "@/components/ui/badge";
@@ -76,7 +77,7 @@ export function CalendarView({ events }: CalendarViewProps) {
                     {format(currentMonth, "MMMM yyyy")}
                 </h2>
                 <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm" onClick={goToToday}>Today</Button>
+                    <InteractiveButton variant="outline" size="sm" onClick={goToToday}>Today</InteractiveButton>
                     <div className="flex items-center border rounded-md">
                         <Button variant="ghost" size="icon" onClick={prevMonth}>
                             <ChevronLeft className="h-4 w-4" />

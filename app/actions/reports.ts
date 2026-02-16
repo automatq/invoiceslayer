@@ -2,25 +2,9 @@
 
 import { prisma } from "@/lib/prisma";
 
-export async function getRevenueByMonth(year: number = new Date().getFullYear()) {
+export async function getRevenueByMonth(year: number = new Date().getFullYear(), basis: "accrual" | "cash" = "accrual") {
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year + 1, 0, 1);
-
-    const invoices = await prisma.invoice.findMany({
-        where: {
-            date: {
-                gte: startDate,
-                lt: endDate,
-            },
-            status: { in: ["PAID", "PARTIAL", "SENT"] } // Include SENT for projected revenue? Maybe just PAID.
-        },
-        select: {
-            date: true,
-            total: true,
-            amountPaid: true,
-            status: true,
-        }
-    });
 
     const monthlyData = Array.from({ length: 12 }, (_, i) => ({
         name: new Date(year, i).toLocaleString('default', { month: 'short' }),
@@ -29,20 +13,54 @@ export async function getRevenueByMonth(year: number = new Date().getFullYear())
         outstanding: 0,
     }));
 
-    invoices.forEach(inv => {
-        const month = inv.date.getMonth();
-        if (inv.status === "PAID") {
+    if (basis === "cash") {
+        // CASH BASIS: Revenue = Payments Received
+        const payments = await prisma.payment.findMany({
+            where: {
+                date: {
+                    gte: startDate,
+                    lt: endDate,
+                }
+            },
+            select: {
+                date: true,
+                amount: true,
+            }
+        });
+
+        payments.forEach(payment => {
+            const month = payment.date.getMonth();
+            monthlyData[month].revenue += payment.amount;
+            monthlyData[month].paid += payment.amount;
+        });
+
+    } else {
+        // ACCRUAL BASIS: Revenue = Invoices Issued (regardless of payment status)
+        const invoices = await prisma.invoice.findMany({
+            where: {
+                date: {
+                    gte: startDate,
+                    lt: endDate,
+                },
+                status: { in: ["PAID", "PARTIAL", "SENT", "OVERDUE"] }
+            },
+            select: {
+                date: true,
+                total: true,
+                amountPaid: true,
+                status: true,
+            }
+        });
+
+        invoices.forEach(inv => {
+            const month = inv.date.getMonth();
+            // In Accrual, Revenue is the Total of the invoice regardless of payment
+            // Unless it's Draft/Cancelled (filtered out above)
             monthlyData[month].revenue += inv.total;
-            monthlyData[month].paid += inv.total;
-        } else if (inv.status === "PARTIAL") {
-            monthlyData[month].revenue += inv.total; // Total value of invoice
             monthlyData[month].paid += inv.amountPaid;
             monthlyData[month].outstanding += (inv.total - inv.amountPaid);
-        } else if (inv.status === "SENT") {
-            monthlyData[month].revenue += inv.total;
-            monthlyData[month].outstanding += inv.total;
-        }
-    });
+        });
+    }
 
     return monthlyData;
 }

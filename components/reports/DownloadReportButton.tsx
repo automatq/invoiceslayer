@@ -1,6 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { InteractiveButton } from "@/components/ui/interactive-button"
 import { Download } from "lucide-react"
 
 export function DownloadReportButton({ data, filename = "report.csv" }: { data: any[], filename?: string }) {
@@ -25,9 +26,9 @@ export function DownloadReportButton({ data, filename = "report.csv" }: { data: 
     }
 
     return (
-        <Button variant="outline" size="sm" onClick={handleDownload}>
+        <InteractiveButton variant="outline" size="sm" onClick={handleDownload}>
             <Download className="mr-2 h-4 w-4" />
             Export CSV
-        </Button>
+        </InteractiveButton>
     )
 }
