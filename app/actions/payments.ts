@@ -33,7 +33,7 @@ export async function recordPayment(data: {
     const { invoiceId, amount, date, method, notes } = validatedData.data;
 
     try {
-        const result = await prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx: any) => {
             // 1. Create Payment record
             const payment = await tx.payment.create({
                 data: {
@@ -84,6 +84,8 @@ export async function recordPayment(data: {
 
         revalidatePath(`/invoices/${invoiceId}`);
         revalidatePath("/invoices");
+        revalidatePath("/reports");
+        revalidatePath("/");
         return { success: true, paymentId: result.payment.id };
     } catch (e: any) {
         console.error(e);
@@ -100,7 +102,7 @@ export async function getPayments(invoiceId: string) {
 
 export async function deletePayment(paymentId: string, invoiceId: string) {
     try {
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: any) => {
             // 1. Get payment to know amount
             const payment = await tx.payment.findUnique({
                 where: { id: paymentId },
@@ -147,6 +149,8 @@ export async function deletePayment(paymentId: string, invoiceId: string) {
 
         revalidatePath(`/invoices/${invoiceId}`);
         revalidatePath("/invoices");
+        revalidatePath("/reports");
+        revalidatePath("/");
         return { success: true };
     } catch (e: any) {
         return { success: false, message: e.message || "Failed to delete payment" };

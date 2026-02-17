@@ -1,6 +1,7 @@
 "use client";
 import { cn } from "@/lib/utils";
 import Link, { LinkProps } from "next/link";
+import { usePathname } from "next/navigation";
 import React, { useState, createContext, useContext } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { IconMenu2, IconX } from "@tabler/icons-react";
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button";
 interface Links {
   label: string;
   href: string;
-  icon: React.JSX.Element | React.ReactNode;
+  icon: React.ReactElement; // Using ReactElement for cloneElement compatibility
 }
 
 interface SidebarContextProps {
@@ -90,11 +91,11 @@ export const DesktopSidebar = ({
     <>
       <motion.div
         className={cn(
-          "h-full px-4 py-4 hidden  md:flex md:flex-col bg-neutral-100 dark:bg-neutral-800 w-[300px] flex-shrink-0",
+          "h-full px-4 py-4 hidden  md:flex md:flex-col bg-neutral-100 dark:bg-neutral-800 w-[140px] flex-shrink-0",
           className
         )}
         animate={{
-          width: animate ? (open ? "300px" : "60px") : "300px",
+          width: animate ? (open ? "140px" : "60px") : "140px",
         }}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
@@ -164,23 +165,39 @@ export const SidebarLink = ({
   props?: LinkProps;
 }) => {
   const { open, animate } = useSidebar();
+  const pathname = usePathname();
+  const isActive = pathname === link.href;
+
   return (
     <Link
       href={link.href}
       className={cn(
-        "flex items-center justify-start gap-2  group/sidebar py-2 hover:bg-accent hover:text-accent-foreground rounded-md px-2 transition-all",
+        "flex items-center gap-2 group/sidebar py-2 rounded-md transition-all duration-200",
+        open ? "justify-start px-2" : "justify-center p-2",
+        isActive
+          ? "bg-neutral-200 dark:bg-neutral-700 text-black dark:text-white font-medium"
+          : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-200",
         className
       )}
       {...props}
     >
-      {link.icon}
+      {/* Clone the icon to enforce size and current text color */}
+      {React.cloneElement(link.icon as React.ReactElement<any>, {
+        className: cn(
+          "h-5 w-5 flex-shrink-0",
+          isActive ? "text-black dark:text-white" : "text-neutral-500 dark:text-neutral-400 group-hover/sidebar:text-neutral-700 dark:group-hover/sidebar:text-neutral-200"
+        ),
+      })}
 
       <motion.span
         animate={{
           display: animate ? (open ? "inline-block" : "none") : "inline-block",
           opacity: animate ? (open ? 1 : 0) : 1,
         }}
-        className="text-neutral-700 dark:text-neutral-200 text-sm group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0"
+        className={cn(
+          "text-sm font-medium tracking-tight whitespace-pre inline-block !p-0 !m-0 transition-transform duration-200",
+          !isActive && "group-hover/sidebar:translate-x-1"
+        )}
       >
         {link.label}
       </motion.span>

@@ -4,7 +4,7 @@ import { deleteInvoice } from "@/app/actions/invoices";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { MoreHorizontal, FileText, Pencil, Trash, Download } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { InteractiveButton } from "@/components/ui/interactive-button";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -39,10 +39,10 @@ export function InvoiceRowActions({ invoice }: InvoiceRowActionsProps) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
+                <InteractiveButton variant="ghost" className="h-8 w-8 p-0">
                     <span className="sr-only">Open menu</span>
                     <MoreHorizontal className="h-4 w-4" />
-                </Button>
+                </InteractiveButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>

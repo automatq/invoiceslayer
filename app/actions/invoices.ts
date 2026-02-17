@@ -108,9 +108,42 @@ export async function updateInvoiceStatus(id: string, status: string) {
     }
 
     try {
-        await prisma.invoice.update({
-            where: { id },
-            data: { status },
+        await prisma.$transaction(async (tx: any) => {
+            const invoice = await tx.invoice.findUnique({
+                where: { id },
+                select: { total: true, amountPaid: true, number: true }
+            });
+
+            if (!invoice) throw new Error("Invoice not found");
+
+            // If marking as PAID and not fully paid, create a payment for the balance
+            if (status === "PAID" && invoice.amountPaid < invoice.total) {
+                const balance = invoice.total - invoice.amountPaid;
+                await tx.payment.create({
+                    data: {
+                        invoiceId: id,
+                        amount: balance,
+                        date: new Date(),
+                        method: "MANUAL",
+                        notes: "Auto-generated via 'Mark as Paid'",
+                    }
+                });
+
+                // Update amountPaid to total
+                await tx.invoice.update({
+                    where: { id },
+                    data: {
+                        status,
+                        amountPaid: invoice.total
+                    },
+                });
+            } else {
+                // Just update status
+                await tx.invoice.update({
+                    where: { id },
+                    data: { status },
+                });
+            }
         });
 
         revalidatePath(`/invoices/${id}`);
@@ -132,13 +165,20 @@ const InvoiceItemSchema = z.object({
 
 const InvoiceSchema = z.object({
     clientId: z.string().min(1, "Client is required"),
+    projectId: z.string().optional(),
     date: z.string().transform((str) => new Date(str)),
     dueDate: z.string().transform((str) => new Date(str)),
     items: z.array(InvoiceItemSchema),
+    escrow: z.object({
+        platform: z.string(),
+        resourceId: z.string(),
+        condition: z.string(),
+    }).optional(),
 });
 
 export async function createInvoice(data: {
     clientId: string;
+    projectId?: string;
     date: string;
     dueDate: string;
     items: { description: string; quantity: number; unitPrice: number; taxRate?: number }[];
@@ -179,6 +219,7 @@ export async function createInvoice(data: {
             data: {
                 number: nextNumber,
                 clientId: validatedData.data.clientId,
+                projectId: validatedData.data.projectId,
                 date: validatedData.data.date,
                 dueDate: validatedData.data.dueDate,
                 status: "DRAFT",
@@ -195,10 +236,21 @@ export async function createInvoice(data: {
                         taxAmount: item.taxAmount,
                     })),
                 },
+                escrowContract: validatedData.data.escrow ? {
+                    create: {
+                        platform: validatedData.data.escrow.platform,
+                        resourceId: validatedData.data.escrow.resourceId,
+                        condition: validatedData.data.escrow.condition,
+                        amount: total, // Escrow the full amount for now
+                        status: "PENDING"
+                    }
+                } : undefined,
             },
         });
 
         revalidatePath("/invoices");
+        revalidatePath("/reports");
+        revalidatePath("/");
         return { success: true, invoiceId: invoice.id };
     } catch (e) {
         console.error(e);
@@ -220,6 +272,7 @@ export async function deleteInvoice(id: string) {
 
 export async function updateInvoice(id: string, data: {
     clientId: string;
+    projectId?: string;
     date: string;
     dueDate: string;
     items: { description: string; quantity: number; unitPrice: number; taxRate?: number }[];
@@ -245,12 +298,13 @@ export async function updateInvoice(id: string, data: {
     const total = subtotal + taxTotal;
 
     try {
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: any) => {
             // 1. Update Invoice basic details
             await tx.invoice.update({
                 where: { id },
                 data: {
                     clientId: validatedData.data.clientId,
+                    projectId: validatedData.data.projectId,
                     date: validatedData.data.date,
                     dueDate: validatedData.data.dueDate,
                     total: total,
@@ -280,6 +334,8 @@ export async function updateInvoice(id: string, data: {
 
         revalidatePath("/invoices");
         revalidatePath(`/invoices/${id}`);
+        revalidatePath("/reports");
+        revalidatePath("/");
         return { success: true };
     } catch (e) {
         console.error(e);

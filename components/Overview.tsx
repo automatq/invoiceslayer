@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Legend } from "recharts"
 
 import {
     ChartContainer,
@@ -12,8 +12,12 @@ import {
 
 const chartConfig = {
     revenue: {
-        label: "Revenue",
+        label: "Realized",
         color: "oklch(0.75 0.15 85)",
+    },
+    projected: {
+        label: "Projected",
+        color: "oklch(0.65 0.12 280)",
     },
     quotes: {
         label: "Quotes",
@@ -21,7 +25,7 @@ const chartConfig = {
     },
 } satisfies ChartConfig
 
-export function Overview({ data }: { data: { name: string; revenue: number; quotes: number }[] }) {
+export function Overview({ data }: { data: { name: string; revenue: number; projected?: number; quotes: number }[] }) {
     return (
         <ChartContainer
             config={chartConfig}
@@ -39,6 +43,18 @@ export function Overview({ data }: { data: { name: string; revenue: number; quot
                             offset="95%"
                             stopColor="var(--color-revenue)"
                             stopOpacity={0.05}
+                        />
+                    </linearGradient>
+                    <linearGradient id="fillProjected" x1="0" y1="0" x2="0" y2="1">
+                        <stop
+                            offset="5%"
+                            stopColor="var(--color-projected)"
+                            stopOpacity={0.6}
+                        />
+                        <stop
+                            offset="95%"
+                            stopColor="var(--color-projected)"
+                            stopOpacity={0.02}
                         />
                     </linearGradient>
                     <linearGradient id="fillQuotes" x1="0" y1="0" x2="0" y2="1">
@@ -77,19 +93,31 @@ export function Overview({ data }: { data: { name: string; revenue: number; quot
                         <ChartTooltipContent
                             indicator="dot"
                             formatter={(value, name) => (
-                                <span>
-                                    ${Number(value).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                                </span>
+                                <div className="flex items-center gap-1">
+                                    <span className="font-mono font-medium">
+                                        ${Number(value).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
                             )}
                         />
                     }
                 />
+                <Legend verticalAlign="top" height={36} />
                 <Area
                     dataKey="quotes"
                     type="natural"
                     fill="url(#fillQuotes)"
                     stroke="var(--color-quotes)"
                     strokeWidth={2}
+                    stackId="a"
+                />
+                <Area
+                    dataKey="projected"
+                    type="natural"
+                    fill="url(#fillProjected)"
+                    stroke="var(--color-projected)"
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
                     stackId="a"
                 />
                 <Area

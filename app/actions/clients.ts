@@ -98,12 +98,59 @@ export async function updateClient(id: string, formData: FormData) {
 
 export async function deleteClient(id: string) {
     try {
+        // Check for related invoices or quotes first
+        const client = await prisma.client.findUnique({
+            where: { id },
+            include: {
+                _count: {
+                    select: {
+                        invoices: true,
+                        quotes: true,
+                    },
+                },
+            },
+        });
+
+        if (!client) {
+            return { success: false, message: "Client not found" };
+        }
+
+        if (client._count.invoices > 0 || client._count.quotes > 0) {
+            return {
+                success: false,
+                message: "Cannot delete client with active invoices or quotes. Please delete related records first."
+            };
+        }
+
         await prisma.client.delete({
             where: { id },
         });
         revalidatePath("/clients");
         return { success: true };
-    } catch (e) {
-        return { message: "Database Error: Failed to delete client" };
+    } catch (e: any) {
+        console.error("Delete client error:", e);
+        return { success: false, message: "Database Error: Failed to delete client" };
     }
+}
+
+export async function getClientsByRevenue(limit = 5) {
+    const clients = await prisma.client.findMany({
+        include: {
+            invoices: {
+                select: {
+                    amountPaid: true,
+                },
+            },
+        },
+    });
+
+    const clientsWithRevenue = clients.map((client: any) => ({
+        id: client.id,
+        name: client.name,
+        revenue: client.invoices.reduce((sum: number, inv: any) => sum + (inv.amountPaid || 0), 0),
+    }));
+
+    return clientsWithRevenue
+        .sort((a: any, b: any) => b.revenue - a.revenue)
+        .slice(0, limit);
 }

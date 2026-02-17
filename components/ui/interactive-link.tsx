@@ -31,7 +31,7 @@ export function InteractiveLink({
         <MotionLink
             className={cn(
                 buttonVariants({ variant, size, className }),
-                !isSubtle && "relative overflow-hidden border border-white/10 group bg-transparent hover:bg-transparent text-white dark:text-white hover:text-white"
+                !isSubtle && "relative overflow-hidden border border-white/10 dark:border-white/10 group bg-slate-950 dark:bg-black hover:bg-slate-900 dark:hover:bg-zinc-900 text-white shadow-lg shadow-black/20"
             )}
             style={
                 !isSubtle ? {
@@ -55,13 +55,14 @@ export function InteractiveLink({
             {!isSubtle && (
                 <>
                     {/* Spinning Gradient Border */}
-                    <div className="absolute top-1/2 left-1/2 -z-20 h-[500%] w-[500%] -translate-x-1/2 -translate-y-1/2 animate-spin-around [background:conic-gradient(transparent_0deg,transparent_300deg,var(--shimmer-color)_360deg)] opacity-100" />
+                    <div className="absolute top-1/2 left-1/2 -z-10 h-[500%] w-[500%] -translate-x-1/2 -translate-y-1/2 animate-spin-around [background:conic-gradient(transparent_0deg,transparent_300deg,var(--shimmer-color)_360deg)] opacity-100" />
 
-                    {/* Backdrop */}
+                    {/* Backdrop - now at z-0 to ensure it's on top of background but behind text */}
                     <div
                         className={cn(
-                            "absolute inset-[1.5px] -z-10 rounded-[calc(var(--radius)-1.5px)] bg-black",
-                            "transition-colors duration-300 group-hover:bg-[#202020]"
+                            "absolute inset-[1.5px] z-0 rounded-[calc(var(--radius)-1.5px)] bg-slate-950 dark:bg-black",
+                            "transition-colors duration-300 group-hover:bg-slate-900 dark:group-hover:bg-zinc-900",
+                            "border border-white/20 dark:border-white/10 shadow-lg"
                         )}
                     />
                 </>

@@ -12,6 +12,8 @@ const RecurringInvoiceSchema = z.object({
     items: z.string().min(1, "Items are required"), // JSON string
     frequency: z.enum(["WEEKLY", "MONTHLY", "QUARTERLY", "YEARLY"]),
     nextRunDate: z.date(),
+    maxOccurrences: z.number().int().min(1).nullable().optional(),
+    currentOccurrence: z.number().int().min(0).optional(),
     isActive: z.boolean().default(true),
     notes: z.string().optional(),
 });
@@ -39,6 +41,7 @@ export async function createRecurringInvoice(data: {
     items: { description: string; quantity: number; unitPrice: number; taxRate: number }[];
     frequency: "WEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY";
     nextRunDate: Date;
+    maxOccurrences?: number | null;
     notes?: string;
 }) {
     try {
@@ -48,6 +51,7 @@ export async function createRecurringInvoice(data: {
                 items: JSON.stringify(data.items),
                 frequency: data.frequency,
                 nextRunDate: data.nextRunDate,
+                maxOccurrences: data.maxOccurrences,
                 notes: data.notes,
             },
         });
@@ -69,6 +73,7 @@ export async function updateRecurringInvoice(id: string, data: {
     items: { description: string; quantity: number; unitPrice: number; taxRate: number }[];
     frequency: "WEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY";
     nextRunDate: Date;
+    maxOccurrences?: number | null;
     isActive: boolean;
     notes?: string;
 }) {
@@ -80,6 +85,7 @@ export async function updateRecurringInvoice(id: string, data: {
                 items: JSON.stringify(data.items),
                 frequency: data.frequency,
                 nextRunDate: data.nextRunDate,
+                maxOccurrences: data.maxOccurrences,
                 isActive: data.isActive,
                 notes: data.notes,
             },
@@ -155,14 +161,20 @@ export async function processRecurringInvoices() {
                         total,
                         notes: recurring.notes,
                         items: {
-                            create: items.map((item: any) => ({
-                                description: item.description,
-                                quantity: item.quantity,
-                                unitPrice: item.unitPrice,
-                                amount: item.quantity * item.unitPrice,
-                                taxRate: item.taxRate,
-                                taxAmount: item.quantity * item.unitPrice * (item.taxRate / 100),
-                            })),
+                            create: items.map((item: any) => {
+                                let description = item.description;
+                                if (recurring.maxOccurrences) {
+                                    description += ` (Installment ${recurring.currentOccurrence + 1} of ${recurring.maxOccurrences})`;
+                                }
+                                return {
+                                    description,
+                                    quantity: item.quantity,
+                                    unitPrice: item.unitPrice,
+                                    amount: item.quantity * item.unitPrice,
+                                    taxRate: item.taxRate,
+                                    taxAmount: item.quantity * item.unitPrice * (item.taxRate / 100),
+                                };
+                            }),
                         },
                     },
                 });
@@ -185,9 +197,15 @@ export async function processRecurringInvoices() {
                 }
 
                 // Update Recurring Record
+                const isFinished = recurring.maxOccurrences && (recurring.currentOccurrence + 1 >= recurring.maxOccurrences);
+
                 await tx.recurringInvoice.update({
                     where: { id: recurring.id },
-                    data: { nextRunDate: nextDate },
+                    data: {
+                        nextRunDate: nextDate,
+                        currentOccurrence: { increment: 1 },
+                        isActive: isFinished ? false : recurring.isActive
+                    },
                 });
 
                 return { id: newInvoice.id, number: newInvoice.number };

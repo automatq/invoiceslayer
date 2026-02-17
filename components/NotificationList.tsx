@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { InteractiveButton } from "@/components/ui/interactive-button";
 import { Check, Info, AlertTriangle, CheckCircle, XCircle, Bell } from "lucide-react";
 import { markAsRead, markAllAsRead, NotificationType } from "@/app/actions/notifications";
 import { cn } from "@/lib/utils";
@@ -58,7 +59,7 @@ export function NotificationList({ initialNotifications, initialUnreadCount }: {
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
+                <InteractiveButton variant="ghost" size="icon" className="relative">
                     <Bell className="h-5 w-5" />
                     {unreadCount > 0 && (
                         <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
@@ -66,15 +67,15 @@ export function NotificationList({ initialNotifications, initialUnreadCount }: {
                             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
                         </span>
                     )}
-                </Button>
+                </InteractiveButton>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-0" align="end">
                 <div className="flex items-center justify-between p-4 border-b">
                     <h4 className="font-semibold text-sm">Notifications</h4>
                     {unreadCount > 0 && (
-                        <Button variant="ghost" size="sm" className="text-xs h-auto py-1 px-2" onClick={handleMarkAllAsRead}>
+                        <InteractiveButton variant="ghost" size="sm" className="text-xs h-auto py-1 px-2" onClick={handleMarkAllAsRead}>
                             Mark all as read
-                        </Button>
+                        </InteractiveButton>
                     )}
                 </div>
                 <ScrollArea className="h-[300px]">
@@ -113,7 +114,7 @@ export function NotificationList({ initialNotifications, initialUnreadCount }: {
                                         </div>
                                     </div>
                                     {!notification.read && (
-                                        <Button
+                                        <InteractiveButton
                                             variant="ghost"
                                             size="icon"
                                             className="h-6 w-6 absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -124,7 +125,7 @@ export function NotificationList({ initialNotifications, initialUnreadCount }: {
                                             title="Mark as read"
                                         >
                                             <Check className="h-3 w-3" />
-                                        </Button>
+                                        </InteractiveButton>
                                     )}
                                 </div>
                             ))}

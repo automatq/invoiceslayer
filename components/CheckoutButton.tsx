@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { CreditCard, Loader2 } from "lucide-react";
+import { InteractiveButton } from "@/components/ui/interactive-button";
+import { CreditCard } from "lucide-react";
 import { createCheckoutSession } from "@/app/actions/stripe";
 import { toast } from "sonner";
 
@@ -29,18 +29,14 @@ export function CheckoutButton({ invoiceId, amount }: CheckoutButtonProps) {
     };
 
     return (
-        <Button
+        <InteractiveButton
             onClick={handleCheckout}
-            disabled={loading}
+            loading={loading}
             size="lg"
             className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
         >
-            {loading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-                <CreditCard className="mr-2 h-4 w-4" />
-            )}
+            <CreditCard className="mr-2 h-4 w-4" />
             Pay ${amount.toFixed(2)} Now
-        </Button>
+        </InteractiveButton>
     );
 }

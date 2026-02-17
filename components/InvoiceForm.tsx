@@ -4,6 +4,7 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { createInvoice, updateInvoice } from "@/app/actions/invoices";
+import { getProjects } from "@/app/actions/projects";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Switch } from "@/components/ui/switch";
 
 const InvoiceItemSchema = z.object({
     description: z.string().min(1, "Description is required"),
@@ -26,15 +28,35 @@ const InvoiceItemSchema = z.object({
 
 const InvoiceSchema = z.object({
     clientId: z.string().min(1, "Client is required"),
+    projectId: z.string().optional(),
     date: z.date(),
     dueDate: z.date(),
     items: z.array(InvoiceItemSchema).min(1, "At least one item is required"),
+    enableEscrow: z.boolean().default(false),
+    escrowPlatform: z.string().optional(),
+    escrowResourceId: z.string().optional(),
+    escrowCondition: z.string().optional(),
 });
 
 type InvoiceFormValues = z.infer<typeof InvoiceSchema>;
 
-export function InvoiceForm({ clients, initialData, defaultTaxRate = 13 }: { clients: { id: string; name: string }[]; initialData?: any; defaultTaxRate?: number }) {
+export function InvoiceForm({
+    clients,
+    initialData,
+    defaultTaxRate = 13,
+    searchParams
+}: {
+    clients: { id: string; name: string }[];
+    initialData?: any;
+    defaultTaxRate?: number;
+    searchParams?: { [key: string]: string | string[] | undefined };
+}) {
     const router = useRouter();
+
+    const prefilledAmount = searchParams?.amount ? parseFloat(searchParams.amount as string) : 0;
+    const prefilledDescription = prefilledAmount > 0 ? "Services" : "";
+
+    const [projects, setProjects] = useState<any[]>([]);
 
     const {
         register,
@@ -47,6 +69,7 @@ export function InvoiceForm({ clients, initialData, defaultTaxRate = 13 }: { cli
         resolver: zodResolver(InvoiceSchema),
         defaultValues: {
             clientId: initialData?.clientId || "",
+            projectId: initialData?.projectId || "",
             date: initialData ? new Date(initialData.date) : new Date(),
             dueDate: initialData ? new Date(initialData.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             items: initialData?.items?.map((item: any) => ({
@@ -54,9 +77,23 @@ export function InvoiceForm({ clients, initialData, defaultTaxRate = 13 }: { cli
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
                 taxRate: item.taxRate ?? defaultTaxRate,
-            })) || [{ description: "", quantity: 1, unitPrice: 0, taxRate: defaultTaxRate }],
+            })) || [{ description: prefilledDescription, quantity: 1, unitPrice: prefilledAmount, taxRate: defaultTaxRate }],
+            enableEscrow: !!initialData?.escrowContract,
+            escrowPlatform: initialData?.escrowContract?.platform || "FIGMA",
+            escrowResourceId: initialData?.escrowContract?.resourceId || "",
+            escrowCondition: initialData?.escrowContract?.condition || "APPROVED",
         },
     });
+
+    const selectedClientId = watch("clientId");
+
+    useEffect(() => {
+        if (selectedClientId) {
+            getProjects(selectedClientId).then(setProjects);
+        } else {
+            setProjects([]);
+        }
+    }, [selectedClientId]);
 
     const { fields, append, remove } = useFieldArray({
         control,
@@ -79,6 +116,11 @@ export function InvoiceForm({ clients, initialData, defaultTaxRate = 13 }: { cli
                 ...data,
                 date: data.date.toISOString(),
                 dueDate: data.dueDate.toISOString(),
+                escrow: data.enableEscrow ? {
+                    platform: data.escrowPlatform || "FIGMA",
+                    resourceId: data.escrowResourceId || "",
+                    condition: data.escrowCondition || "APPROVED",
+                } : undefined,
             };
 
             let result;
@@ -137,6 +179,28 @@ export function InvoiceForm({ clients, initialData, defaultTaxRate = 13 }: { cli
                     </div>
 
                     <div className="space-y-2">
+                        <Label>Project (Optional)</Label>
+                        <Select
+                            onValueChange={(value) => setValue("projectId", value)}
+                            defaultValue={initialData?.projectId}
+                            value={watch("projectId")}
+                            disabled={!selectedClientId || projects.length === 0}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={projects.length === 0 ? "No projects found" : "Select a project"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {projects.map((project) => (
+                                    <SelectItem key={project.id} value={project.id}>
+                                        {project.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <input type="hidden" {...register("projectId")} />
+                    </div>
+
+                    <div className="space-y-2">
                         <Label>Date</Label>
                         <DatePicker
                             date={watch("date")}
@@ -157,13 +221,72 @@ export function InvoiceForm({ clients, initialData, defaultTaxRate = 13 }: { cli
                             <p className="text-xs text-red-500">{errors.dueDate.message}</p>
                         )}
                     </div>
+
                 </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <div className="space-y-0.5">
+                        <CardTitle>Smart Escrow</CardTitle>
+                        <CardDescription>
+                            Hold funds in escrow until AI verifies a condition.
+                        </CardDescription>
+                    </div>
+                    <Switch
+                        checked={watch("enableEscrow")}
+                        onCheckedChange={(checked) => setValue("enableEscrow", checked)}
+                    />
+                </CardHeader>
+                {watch("enableEscrow") && (
+                    <CardContent className="grid gap-6 md:grid-cols-3">
+                        <div className="space-y-2">
+                            <Label>Platform</Label>
+                            <Select
+                                onValueChange={(value) => setValue("escrowPlatform", value)}
+                                defaultValue={watch("escrowPlatform")}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select platform" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="FIGMA">Figma</SelectItem>
+                                    <SelectItem value="GITHUB">GitHub</SelectItem>
+                                    <SelectItem value="DRIBBBLE">Dribbble</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Resource URL / ID</Label>
+                            <Input
+                                {...register("escrowResourceId")}
+                                placeholder="e.g., https://figma.com/file/..."
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Condition</Label>
+                            <Select
+                                onValueChange={(value) => setValue("escrowCondition", value)}
+                                defaultValue={watch("escrowCondition")}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select condition" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="APPROVED">File Approved</SelectItem>
+                                    <SelectItem value="MERGED">PR Merged</SelectItem>
+                                    <SelectItem value="PUBLISHED">Published</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </CardContent>
+                )}
             </Card>
 
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Line Items</CardTitle>
-                    <Button
+                    <InteractiveButton
                         type="button"
                         variant="outline"
                         size="sm"
@@ -171,7 +294,7 @@ export function InvoiceForm({ clients, initialData, defaultTaxRate = 13 }: { cli
                     >
                         <Plus className="mr-2 h-4 w-4" />
                         Add Item
-                    </Button>
+                    </InteractiveButton>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {/* Column Headers */}
@@ -261,6 +384,6 @@ export function InvoiceForm({ clients, initialData, defaultTaxRate = 13 }: { cli
                     {initialData ? "Update Invoice" : "Create Invoice"}
                 </InteractiveButton>
             </div>
-        </form>
+        </form >
     );
 }

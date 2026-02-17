@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -104,8 +106,8 @@ function Button({
             : {
               scale: 1.05,
               boxShadow: `0 0 20px 2px color-mix(in srgb, ${variant === "destructive"
-                  ? "var(--destructive)"
-                  : "var(--primary)"
+                ? "var(--destructive)"
+                : "var(--primary)"
                 }, transparent 70%)`,
               filter: "brightness(1.1)",
             }

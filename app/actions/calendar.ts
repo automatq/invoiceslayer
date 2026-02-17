@@ -7,25 +7,14 @@ export type CalendarEvent = {
     id: string;
     title: string;
     date: Date;
-    type: "INVOICE" | "QUOTE" | "RECURRING" | "PAYMENT";
+    type: "INVOICE" | "QUOTE" | "RECURRING" | "PAYMENT" | "EXPENSE";
     amount?: number;
     status?: string;
 };
 
 export async function getCalendarEvents(date: Date): Promise<CalendarEvent[]> {
-    // Current logic: Fetch everything. Optimizable later for month-range.
-    // For a real app with tons of data, we should filter by date range.
-    // However, given the schema and current scale, fetching all active/pending items is okay for now, 
-    // but let's try to be slightly efficient and fetch relevant items.
-
-    // Actually, to keep it simple and perfectly accurate for "all time" views (if user scrolls), 
-    // let's fetch based on a window if possible, or just fetch all open items + recent history.
-
-    // Let's just fetch all for now to ensure we don't miss anything, and filter locally or return all. 
-    // Client-side filtering is fast for < 1000 items. 
-
     try {
-        const [invoices, quotes, recurring, payments] = await Promise.all([
+        const [invoices, quotes, recurring, payments, expenses] = await Promise.all([
             prisma.invoice.findMany({
                 select: { id: true, number: true, dueDate: true, total: true, status: true, client: { select: { name: true } } },
             }),
@@ -38,6 +27,9 @@ export async function getCalendarEvents(date: Date): Promise<CalendarEvent[]> {
             }),
             prisma.payment.findMany({
                 select: { id: true, amount: true, date: true, invoice: { select: { number: true, client: { select: { name: true } } } } },
+            }),
+            prisma.expense.findMany({
+                select: { id: true, description: true, amount: true, date: true, category: true },
             }),
         ]);
 
@@ -89,6 +81,17 @@ export async function getCalendarEvents(date: Date): Promise<CalendarEvent[]> {
                 date: pay.date,
                 type: "PAYMENT",
                 amount: pay.amount
+            });
+        });
+
+        // @ts-ignore
+        expenses.forEach((exp: any) => {
+            events.push({
+                id: exp.id,
+                title: `${exp.description}`,
+                date: exp.date,
+                type: "EXPENSE",
+                amount: exp.amount
             });
         });
 

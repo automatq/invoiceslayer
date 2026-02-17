@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { getClients } from "@/app/actions/clients";
+import { getClients, getClientsByRevenue } from "@/app/actions/clients";
 import {
     Table,
     TableBody,
@@ -13,11 +13,13 @@ import { InteractiveLink } from "@/components/ui/interactive-link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ClientActions } from "@/components/ClientActions";
+import { ClientRevenueChart } from "@/components/ClientRevenueChart";
 
 export const dynamic = "force-dynamic";
 
 export default async function ClientsPage() {
     const clients = await getClients();
+    const topClients = await getClientsByRevenue();
 
     return (
         <div className="space-y-6">
@@ -28,6 +30,10 @@ export default async function ClientsPage() {
                     New Client
                 </InteractiveLink>
             </div>
+
+            {topClients.length > 0 && (
+                <ClientRevenueChart data={topClients} />
+            )}
 
             <Card>
                 <CardHeader>
@@ -90,3 +96,5 @@ export default async function ClientsPage() {
         </div>
     );
 }
+
+

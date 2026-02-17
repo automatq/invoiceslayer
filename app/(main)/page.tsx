@@ -10,8 +10,9 @@ import { RecentSales } from "@/components/RecentSales";
 import { getInvoices } from "@/app/actions/invoices";
 import { getClients } from "@/app/actions/clients";
 import { getQuotes } from "@/app/actions/quotes";
-import { getRevenueByMonth } from "@/app/actions/reports";
-import { DollarSign, Clock, Users, FileText, TriangleAlert } from "lucide-react";
+import { getExpenses } from "@/app/actions/expenses";
+import { getRevenueByMonth, getDashboardMetrics } from "@/app/actions/reports";
+import { DollarSign, Clock, TriangleAlert, Wallet, TrendingUp, Repeat } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -21,40 +22,30 @@ import { AccountingBasisToggle } from "@/components/reports/AccountingBasisToggl
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage({ searchParams }: { searchParams: { basis?: string } }) {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ basis?: string }> }) {
+  const { basis: rawBasis } = await searchParams;
   const settings = await getSettings();
   if (!settings) {
     redirect("/onboarding");
   }
 
-  const basis = (searchParams?.basis === "cash") ? "cash" : "accrual";
+  const basis = (rawBasis === "cash") ? "cash" : "accrual";
   const currentYear = new Date().getFullYear();
 
-  const invoices = await getInvoices();
-  const clients = await getClients();
-  const quotes = await getQuotes();
-  const revenueData = await getRevenueByMonth(currentYear, basis as "accrual" | "cash");
+  const [invoices, clients, quotes, expenses, revenueData, metrics] = await Promise.all([
+    getInvoices(),
+    getClients(),
+    getQuotes(),
+    getExpenses(),
+    getRevenueByMonth(currentYear, basis as "accrual" | "cash"),
+    getDashboardMetrics(currentYear, basis as "accrual" | "cash")
+  ]);
 
-  // Metrics
-  const totalRevenue = invoices.reduce((acc: number, inv: any) => {
-    if (basis === "cash") {
-      return acc + (inv.amountPaid || 0);
-    } else {
-      // Accrual: Sum of all finalized invoices
-      if (["PAID", "PARTIAL", "SENT", "OVERDUE"].includes(inv.status)) {
-        return acc + inv.total;
-      }
-      return acc;
-    }
-  }, 0);
-  const pendingInvoices = invoices.filter((inv: any) => inv.status === "PENDING" || inv.status === "SENT").length;
-  const overdueInvoices = invoices.filter((inv: any) => inv.status === "OVERDUE").length;
-  const activeClients = clients.length; // Simplified for now
-  const activeQuotes = quotes.filter((q: any) => q.status === "SENT" || q.status === "DRAFT").length;
+  const { totalRevenue, projectedRevenue, totalExpenses, netProfit, pendingInvoices, overdueInvoices } = metrics;
 
   // Recent Sales Data (Paid Invoices)
   const recentSales = invoices
-    .filter((inv: any) => inv.status === "PAID" || inv.status === "SENT" || inv.status === "PENDING") // Show all for demo if no paid
+    .filter((inv: any) => inv.status === "PAID" || inv.status === "SENT" || inv.status === "PENDING" || inv.status === "PARTIAL")
     .slice(0, 25)
     .map((inv: any) => ({
       id: inv.id,
@@ -65,7 +56,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
     }));
 
   // Merge Revenue Data with Quotes Data
-  const overviewData = revenueData.map((monthData, index) => {
+  const overviewData = revenueData.map((monthData: any, index: number) => {
     const monthQuotes = quotes.reduce((acc: number, q: any) => {
       const qDate = new Date(q.date);
       if (qDate.getFullYear() === currentYear && qDate.getMonth() === index) {
@@ -77,6 +68,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
     return {
       name: monthData.name,
       revenue: monthData.revenue,
+      projected: monthData.projected,
       quotes: monthQuotes,
     };
   });
@@ -104,18 +96,48 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         <Link href="/invoices" className="gradient-border gold transition-transform hover:scale-[1.02]">
           <Card className="border-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+              <CardTitle className="text-sm font-medium">Annual Revenue</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
+              <div className="text-2xl font-bold">${(totalRevenue - projectedRevenue).toFixed(2)}</div>
               <p className="text-xs text-muted-foreground">
-                {basis === "cash" ? "Cash collected" : "Total invoiced value"}
+                Realized income
               </p>
             </CardContent>
           </Card>
         </Link>
-        <Link href="/invoices" className="gradient-border silver transition-transform hover:scale-[1.02]">
+        <Link href="/recurring" className="gradient-border silver transition-transform hover:scale-[1.02]">
+          <Card className="border-0">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Projected Recurring</CardTitle>
+              <Repeat className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">${projectedRevenue.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">
+                Expected by year-end
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/reports" className="gradient-border green transition-transform hover:scale-[1.02]">
+          <Card className="border-0">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Annual Net Profit</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className={cn("text-2xl font-bold", netProfit >= 0 ? "text-green-600" : "text-red-600")}>
+                ${netProfit.toFixed(2)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Realized - Expenses
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/invoices" className="gradient-border blue transition-transform hover:scale-[1.02]">
           <Card className="border-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pending Invoices</CardTitle>
@@ -129,41 +151,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
             </CardContent>
           </Card>
         </Link>
-        <Link href="/clients" className="gradient-border green transition-transform hover:scale-[1.02]">
-          <Card className="border-0">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Clients</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{activeClients}</div>
-              <p className="text-xs text-muted-foreground">
-                Total clients
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/quotes" className="gradient-border blue transition-transform hover:scale-[1.02]">
-          <Card className="border-0">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Quotes</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{activeQuotes}</div>
-              <p className="text-xs text-muted-foreground">
-                Currently open
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Overview</CardTitle>
+            <CardTitle>Revenue Overview</CardTitle>
             <CardDescription>
-              Monthly revenue breakdown for {currentYear}.
+              Monthly breakdown of realized and projected income for {currentYear}.
             </CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
@@ -184,4 +178,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
       </div>
     </div>
   );
+}
+
+function cn(...classes: (string | undefined)[]) {
+  return classes.filter(Boolean).join(" ");
 }

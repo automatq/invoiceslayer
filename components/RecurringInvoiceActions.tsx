@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { InteractiveButton } from "@/components/ui/interactive-button";
 import { Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { deleteRecurringInvoice } from "@/app/actions/recurring";
@@ -24,14 +24,14 @@ export function RecurringInvoiceActions({ id }: { id: string }) {
 
     return (
         <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="icon" asChild>
+            <InteractiveButton variant="ghost" size="icon" asChild>
                 <Link href={`/recurring/${id}/edit`}>
                     <Pencil className="h-4 w-4" />
                 </Link>
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handleDelete} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+            </InteractiveButton>
+            <InteractiveButton variant="ghost" size="icon" onClick={handleDelete} className="text-red-500 hover:text-red-700 hover:bg-red-50">
                 <Trash2 className="h-4 w-4" />
-            </Button>
+            </InteractiveButton>
         </div>
     );
 }

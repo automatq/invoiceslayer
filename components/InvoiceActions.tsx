@@ -14,7 +14,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
+import { InteractiveButton } from "@/components/ui/interactive-button";
 import { toast } from "sonner";
 import Link from "next/link";
 import {
@@ -76,26 +76,26 @@ export function InvoiceActions({ invoice }: { invoice: Invoice }) {
     return (
         <div className="flex gap-2">
             <RecordPaymentDialog invoice={invoice} />
-            <Button variant="outline" size="sm" asChild>
+            <InteractiveButton variant="outline" size="sm" asChild>
                 <Link href={`/invoices/${invoice.id}/edit`}>
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit
                 </Link>
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleGeneratePDF}>
+            </InteractiveButton>
+            <InteractiveButton variant="outline" size="sm" onClick={handleGeneratePDF}>
                 <FileDown className="mr-2 h-4 w-4" />
                 PDF
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleSendEmail} disabled={isUpdating}>
+            </InteractiveButton>
+            <InteractiveButton variant="outline" size="sm" onClick={handleSendEmail} disabled={isUpdating}>
                 <Send className="mr-2 h-4 w-4" />
                 Send Email
-            </Button>
+            </InteractiveButton>
 
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" disabled={isUpdating}>
+                    <InteractiveButton variant="outline" size="sm" disabled={isUpdating}>
                         {isUpdating ? "Updating..." : "Change Status"}
-                    </Button>
+                    </InteractiveButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Set Status</DropdownMenuLabel>

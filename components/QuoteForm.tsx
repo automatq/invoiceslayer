@@ -4,9 +4,11 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { createQuote, updateQuote } from "@/app/actions/quotes";
+import { getProjects } from "@/app/actions/projects";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { InteractiveButton } from "@/components/ui/interactive-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,6 +27,7 @@ const QuoteItemSchema = z.object({
 
 const QuoteSchema = z.object({
     clientId: z.string().min(1, "Client is required"),
+    projectId: z.string().optional(),
     date: z.date(),
     expiryDate: z.date(),
     items: z.array(QuoteItemSchema).min(1, "At least one item is required"),
@@ -34,6 +37,8 @@ type QuoteFormValues = z.infer<typeof QuoteSchema>;
 
 export function QuoteForm({ clients, initialData, defaultTaxRate = 13 }: { clients: { id: string; name: string }[]; initialData?: any; defaultTaxRate?: number }) {
     const router = useRouter();
+
+    const [projects, setProjects] = useState<any[]>([]);
 
     const {
         register,
@@ -46,6 +51,7 @@ export function QuoteForm({ clients, initialData, defaultTaxRate = 13 }: { clien
         resolver: zodResolver(QuoteSchema),
         defaultValues: {
             clientId: initialData?.clientId || "",
+            projectId: initialData?.projectId || "",
             date: initialData ? new Date(initialData.date) : new Date(),
             expiryDate: initialData ? new Date(initialData.expiryDate) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
             items: initialData?.items?.map((item: any) => ({
@@ -56,6 +62,16 @@ export function QuoteForm({ clients, initialData, defaultTaxRate = 13 }: { clien
             })) || [{ description: "", quantity: 1, unitPrice: 0, taxRate: defaultTaxRate }],
         },
     });
+
+    const selectedClientId = watch("clientId");
+
+    useEffect(() => {
+        if (selectedClientId) {
+            getProjects(selectedClientId).then(setProjects);
+        } else {
+            setProjects([]);
+        }
+    }, [selectedClientId]);
 
     const { fields, append, remove } = useFieldArray({
         control,
@@ -135,6 +151,28 @@ export function QuoteForm({ clients, initialData, defaultTaxRate = 13 }: { clien
                     </div>
 
                     <div className="space-y-2">
+                        <Label>Project (Optional)</Label>
+                        <Select
+                            onValueChange={(value) => setValue("projectId", value)}
+                            defaultValue={initialData?.projectId}
+                            value={watch("projectId")}
+                            disabled={!selectedClientId || projects.length === 0}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={projects.length === 0 ? "No projects found" : "Select a project"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {projects.map((project) => (
+                                    <SelectItem key={project.id} value={project.id}>
+                                        {project.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <input type="hidden" {...register("projectId")} />
+                    </div>
+
+                    <div className="space-y-2">
                         <Label>Date</Label>
                         <DatePicker
                             date={watch("date")}
@@ -161,7 +199,7 @@ export function QuoteForm({ clients, initialData, defaultTaxRate = 13 }: { clien
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Line Items</CardTitle>
-                    <Button
+                    <InteractiveButton
                         type="button"
                         variant="outline"
                         size="sm"
@@ -169,7 +207,7 @@ export function QuoteForm({ clients, initialData, defaultTaxRate = 13 }: { clien
                     >
                         <Plus className="mr-2 h-4 w-4" />
                         Add Item
-                    </Button>
+                    </InteractiveButton>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {/* Column Headers */}
@@ -229,7 +267,7 @@ export function QuoteForm({ clients, initialData, defaultTaxRate = 13 }: { clien
                                     )}
                                 </div>
                                 <div className="pt-2">
-                                    <Button
+                                    <InteractiveButton
                                         type="button"
                                         variant="ghost"
                                         size="icon"
@@ -237,7 +275,7 @@ export function QuoteForm({ clients, initialData, defaultTaxRate = 13 }: { clien
                                         onClick={() => remove(index)}
                                     >
                                         <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                    </InteractiveButton>
                                 </div>
                             </div>
                         );
@@ -254,9 +292,9 @@ export function QuoteForm({ clients, initialData, defaultTaxRate = 13 }: { clien
             </Card>
 
             <div className="flex justify-end">
-                <Button type="submit" loading={isSubmitting}>
+                <InteractiveButton type="submit" loading={isSubmitting}>
                     {initialData ? "Update Quote" : "Create Quote"}
-                </Button>
+                </InteractiveButton>
             </div>
         </form>
     );

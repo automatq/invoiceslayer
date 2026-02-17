@@ -6,8 +6,13 @@ import { getClients } from "@/app/actions/clients";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewInvoicePage() {
+export default async function NewInvoicePage({
+    searchParams,
+}: {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
     const clients = await getClients();
+    const resolvedSearchParams = await searchParams;
 
     return (
         <div className="space-y-6">
@@ -20,7 +25,7 @@ export default async function NewInvoicePage() {
                 <h1 className="text-3xl font-bold tracking-tight">Create Invoice</h1>
             </div>
             <div className="mx-auto max-w-2xl">
-                <InvoiceForm clients={clients} />
+                <InvoiceForm clients={clients} searchParams={resolvedSearchParams} />
             </div>
         </div>
     );

@@ -29,6 +29,7 @@ const RecurringInvoiceSchema = z.object({
     nextRunDate: z.date(),
     frequency: z.enum(["WEEKLY", "MONTHLY", "QUARTERLY", "YEARLY"]),
     items: z.array(RecurringInvoiceItemSchema).min(1, "At least one item is required"),
+    maxOccurrences: z.number().int().min(1).nullable().optional(),
     isActive: z.boolean(),
     notes: z.string().optional(),
 });
@@ -59,6 +60,7 @@ export function RecurringInvoiceForm({
             clientId: initialData?.clientId || "",
             nextRunDate: initialData ? new Date(initialData.nextRunDate) : new Date(Date.now() + 24 * 60 * 60 * 1000), // Default tomorrow
             frequency: initialData?.frequency || "MONTHLY",
+            maxOccurrences: initialData?.maxOccurrences || null,
             isActive: initialData?.isActive ?? true,
             notes: initialData?.notes || "",
             items: initialData?.items ? (typeof initialData.items === 'string' ? JSON.parse(initialData.items) : initialData.items) : [{ description: "", quantity: 1, unitPrice: 0, taxRate: defaultTaxRate }],
@@ -173,6 +175,23 @@ export function RecurringInvoiceForm({
                         )}
                     </div>
 
+                    <div className="space-y-2">
+                        <Label>Number of Runs (Optional)</Label>
+                        <Input
+                            type="number"
+                            placeholder="Infinite"
+                            {...register("maxOccurrences", {
+                                setValueAs: (v) => v === "" ? null : parseInt(v, 10)
+                            })}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Leave empty for infinite. {initialData && `Current run: ${initialData.currentOccurrence}`}
+                        </p>
+                        {errors.maxOccurrences && (
+                            <p className="text-xs text-red-500">{errors.maxOccurrences.message}</p>
+                        )}
+                    </div>
+
                     <div className="space-y-2 flex items-center gap-2 pt-6">
                         <Label>Active Status</Label>
                         <Switch
@@ -186,7 +205,7 @@ export function RecurringInvoiceForm({
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Template Items</CardTitle>
-                    <Button
+                    <InteractiveButton
                         type="button"
                         variant="outline"
                         size="sm"
@@ -194,7 +213,7 @@ export function RecurringInvoiceForm({
                     >
                         <Plus className="mr-2 h-4 w-4" />
                         Add Item
-                    </Button>
+                    </InteractiveButton>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {/* Column Headers */}
@@ -254,7 +273,7 @@ export function RecurringInvoiceForm({
                                     )}
                                 </div>
                                 <div className="pt-2">
-                                    <Button
+                                    <InteractiveButton
                                         type="button"
                                         variant="ghost"
                                         size="icon"
@@ -262,7 +281,7 @@ export function RecurringInvoiceForm({
                                         onClick={() => remove(index)}
                                     >
                                         <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                    </InteractiveButton>
                                 </div>
                             </div>
                         );

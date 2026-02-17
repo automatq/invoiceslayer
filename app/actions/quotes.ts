@@ -14,9 +14,10 @@ const QuoteItemSchema = z.object({
 
 const QuoteSchema = z.object({
     clientId: z.string().min(1, "Client is required"),
-    date: z.string().transform((str) => new Date(str)),
-    expiryDate: z.string().transform((str) => new Date(str)),
-    items: z.array(QuoteItemSchema),
+    projectId: z.string().optional(),
+    date: z.date(),
+    expiryDate: z.date(),
+    items: z.array(QuoteItemSchema).min(1, "At least one item is required"),
 });
 
 export async function getQuotes() {
@@ -31,6 +32,7 @@ export async function getQuotes() {
 
 export async function createQuote(data: {
     clientId: string;
+    projectId?: string;
     date: string;
     expiryDate: string;
     items: { description: string; quantity: number; unitPrice: number; taxRate?: number }[];
@@ -71,6 +73,7 @@ export async function createQuote(data: {
             data: {
                 number: nextNumber,
                 clientId: validatedData.data.clientId,
+                projectId: validatedData.data.projectId,
                 date: validatedData.data.date,
                 expiryDate: validatedData.data.expiryDate,
                 subtotal: subtotal,
@@ -90,6 +93,8 @@ export async function createQuote(data: {
         });
 
         revalidatePath("/quotes");
+        revalidatePath("/reports");
+        revalidatePath("/");
         return { success: true, quoteId: quote.id };
     } catch (e) {
         console.error(e);
@@ -109,6 +114,7 @@ export async function getQuote(id: string) {
 
 export async function updateQuote(id: string, data: {
     clientId: string;
+    projectId?: string;
     date: string;
     expiryDate: string;
     items: { description: string; quantity: number; unitPrice: number; taxRate?: number }[];
@@ -134,11 +140,12 @@ export async function updateQuote(id: string, data: {
     const total = subtotal + taxTotal;
 
     try {
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: any) => {
             await tx.quote.update({
                 where: { id },
                 data: {
                     clientId: validatedData.data.clientId,
+                    projectId: validatedData.data.projectId,
                     date: validatedData.data.date,
                     expiryDate: validatedData.data.expiryDate,
                     subtotal: subtotal,
@@ -166,6 +173,8 @@ export async function updateQuote(id: string, data: {
 
         revalidatePath("/quotes");
         revalidatePath(`/quotes/${id}`);
+        revalidatePath("/reports");
+        revalidatePath("/");
         return { success: true };
     } catch (e) {
         console.error(e);

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Camera, X } from "lucide-react";
+import { InteractiveButton } from "@/components/ui/interactive-button";
 
 interface ClientFormProps {
     initialData?: {
@@ -207,9 +208,9 @@ export function ClientForm({ initialData }: ClientFormProps) {
                     </div>
                 </CardContent>
                 <CardFooter className="flex justify-end mt-4">
-                    <Button type="submit" loading={isSubmitting}>
+                    <InteractiveButton type="submit" loading={isSubmitting}>
                         {initialData ? "Update Client" : "Save Client"}
-                    </Button>
+                    </InteractiveButton>
                 </CardFooter>
             </form>
         </Card>

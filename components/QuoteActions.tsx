@@ -8,7 +8,7 @@ import { generateQuotePDF } from "@/lib/generatePdf";
 import { toast } from "sonner";
 import Link from "next/link";
 import { FileDown, FileCheck, Trash, Pencil, Send } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { InteractiveButton } from "@/components/ui/interactive-button";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 // import { Quote } from "@prisma/client"; // Prisma types sometimes need full relation types, let's use any for now or specific
@@ -69,21 +69,21 @@ export function QuoteActions({ quote }: { quote: QuoteWithRelations }) {
 
     return (
         <div className="flex gap-2">
-            <Button variant="outline" size="sm" asChild>
+            <InteractiveButton variant="outline" size="sm" asChild>
                 <Link href={`/quotes/${quote.id}/edit`}>
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit
                 </Link>
-            </Button>
-            <Button variant="outline" size="sm" onClick={generatePDF}>
+            </InteractiveButton>
+            <InteractiveButton variant="outline" size="sm" onClick={generatePDF}>
                 <FileDown className="mr-2 h-4 w-4" />
                 PDF
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleSendEmail} disabled={isSending}>
+            </InteractiveButton>
+            <InteractiveButton variant="outline" size="sm" onClick={handleSendEmail} disabled={isSending}>
                 <Send className="mr-2 h-4 w-4" />
                 {isSending ? "Sending..." : "Send Email"}
-            </Button>
-            <Button
+            </InteractiveButton>
+            <InteractiveButton
                 variant="outline"
                 size="sm"
                 onClick={handleConvert}
@@ -91,14 +91,14 @@ export function QuoteActions({ quote }: { quote: QuoteWithRelations }) {
             >
                 <FileCheck className="mr-2 h-4 w-4" />
                 {isConverting ? "Converting..." : "Convert"}
-            </Button>
-            <Button
+            </InteractiveButton>
+            <InteractiveButton
                 variant="destructive"
                 size="sm"
                 onClick={handleDelete}
             >
                 <Trash className="mr-2 h-4 w-4" />
-            </Button>
+            </InteractiveButton>
         </div>
     );
 }

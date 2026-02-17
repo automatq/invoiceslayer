@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { InteractiveButton } from "@/components/ui/interactive-button";
 import {
     Dialog,
     DialogContent,
@@ -19,15 +19,23 @@ import { recordPayment } from "@/app/actions/payments";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { CreditCard } from "lucide-react";
+import { DatePicker } from "@/components/DatePicker";
 
-export function RecordPaymentDialog({ invoice }: { invoice: any }) {
+export function RecordPaymentDialog({ invoice }: {
+    invoice: {
+        id: string;
+        number: string;
+        total: number;
+        amountPaid: number;
+    }
+}) {
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
     const remainingBalance = invoice.total - invoice.amountPaid;
 
     const [amount, setAmount] = useState(remainingBalance.toString());
-    const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+    const [date, setDate] = useState<Date | undefined>(new Date());
     const [method, setMethod] = useState("E-TRANSFER");
     const [notes, setNotes] = useState("");
 
@@ -35,11 +43,17 @@ export function RecordPaymentDialog({ invoice }: { invoice: any }) {
         e.preventDefault();
         setIsLoading(true);
 
+        if (!date) {
+            toast.error("Please select a date");
+            setIsLoading(false);
+            return;
+        }
+
         try {
             const result = await recordPayment({
                 invoiceId: invoice.id,
                 amount: parseFloat(amount),
-                date: new Date(date),
+                date: date,
                 method,
                 notes,
             });
@@ -53,7 +67,7 @@ export function RecordPaymentDialog({ invoice }: { invoice: any }) {
             } else {
                 toast.error(result.message || "Failed to record payment");
             }
-        } catch (error) {
+        } catch {
             toast.error("An unexpected error occurred");
         } finally {
             setIsLoading(false);
@@ -63,10 +77,10 @@ export function RecordPaymentDialog({ invoice }: { invoice: any }) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
+                <InteractiveButton variant="outline" size="sm">
                     <CreditCard className="mr-2 h-4 w-4" />
                     Record Payment
-                </Button>
+                </InteractiveButton>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 <form onSubmit={handleSubmit}>
@@ -95,14 +109,9 @@ export function RecordPaymentDialog({ invoice }: { invoice: any }) {
                             <Label htmlFor="date" className="text-right">
                                 Date
                             </Label>
-                            <Input
-                                id="date"
-                                type="date"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                                className="col-span-3"
-                                required
-                            />
+                            <div className="col-span-3">
+                                <DatePicker date={date} onDateChange={setDate} />
+                            </div>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="method" className="text-right">
@@ -134,9 +143,9 @@ export function RecordPaymentDialog({ invoice }: { invoice: any }) {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="submit" loading={isLoading}>
+                        <InteractiveButton type="submit" loading={isLoading}>
                             Save Payment
-                        </Button>
+                        </InteractiveButton>
                     </DialogFooter>
                 </form>
             </DialogContent>

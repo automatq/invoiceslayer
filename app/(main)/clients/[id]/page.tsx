@@ -1,7 +1,10 @@
+import { ClientPortalAccess } from "@/components/ClientPortalAccess";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Pencil, FileText, FileSpreadsheet } from "lucide-react";
 import { getClient } from "@/app/actions/clients";
+import { getProjects } from "@/app/actions/projects";
+import { ProjectList } from "@/components/projects/ProjectList";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,12 +19,16 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { StatusBadge } from "@/components/StatusBadge";
+import { InteractiveLink } from "@/components/ui/interactive-link";
 
 export const dynamic = "force-dynamic";
 
 export default async function ClientPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const client = await getClient(id);
+    const [client, projects] = await Promise.all([
+        getClient(id),
+        getProjects(id)
+    ]);
 
     if (!client) {
         notFound();
@@ -41,12 +48,10 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
                     <h1 className="text-3xl font-bold tracking-tight">{client.name}</h1>
                     <div className="text-muted-foreground">{client.email}</div>
                 </div>
-                <Button asChild>
-                    <Link href={`/clients/${client.id}/edit`}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit Client
-                    </Link>
-                </Button>
+                <InteractiveLink href={`/clients/${client.id}/edit`}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit Client
+                </InteractiveLink>
             </div>
 
             <Tabs defaultValue="overview" className="space-y-4">
@@ -58,52 +63,62 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
                     <TabsTrigger value="quotes">
                         Quotes ({quotes.length})
                     </TabsTrigger>
+                    <TabsTrigger value="projects">
+                        Projects ({projects.length})
+                    </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-4">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Client Details</CardTitle>
-                            <CardDescription>Personal and contact information.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-center gap-4">
-                                <Avatar className="h-20 w-20">
-                                    <AvatarFallback className="text-2xl">
-                                        {client.name
-                                            .split(" ")
-                                            .map((n: string) => n[0])
-                                            .join("")
-                                            .toUpperCase()
-                                            .slice(0, 2)}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <div className="space-y-1">
-                                    <div className="font-semibold text-xl">{client.name}</div>
-                                    <div className="text-muted-foreground">{client.id}</div>
-                                </div>
-                            </div>
-                            <Separator />
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-1">
-                                    <span className="text-sm font-medium text-muted-foreground">Email</span>
-                                    <div className="font-medium">{client.email}</div>
-                                </div>
-                                <div className="space-y-1">
-                                    <span className="text-sm font-medium text-muted-foreground">Phone</span>
-                                    <div className="font-medium">{client.phone || "N/A"}</div>
-                                </div>
-                                <div className="space-y-1">
-                                    <span className="text-sm font-medium text-muted-foreground">Address</span>
-                                    <div className="font-medium md:col-span-2">{client.address || "N/A"}</div>
-                                </div>
-                                <div className="space-y-1">
-                                    <span className="text-sm font-medium text-muted-foreground">GST/HST Number</span>
-                                    <div className="font-medium">{client.vatNumber || "N/A"}</div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <div className="grid gap-4 md:grid-cols-3">
+                        <div className="md:col-span-2 space-y-4">
+                            <Card>
+                                <CardHeader>
+                                    <div className="flex items-start justify-between">
+                                        <div>
+                                            <CardTitle>Client Details</CardTitle>
+                                            <CardDescription>Personal and contact information.</CardDescription>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <Avatar className="h-16 w-16">
+                                                <AvatarFallback className="text-xl">
+                                                    {client.name
+                                                        .split(" ")
+                                                        .map((n: string) => n[0])
+                                                        .join("")
+                                                        .toUpperCase()
+                                                        .slice(0, 2)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <Separator />
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                        <div className="space-y-1">
+                                            <span className="text-sm font-medium text-muted-foreground">Email</span>
+                                            <div className="font-medium">{client.email}</div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-sm font-medium text-muted-foreground">Phone</span>
+                                            <div className="font-medium">{client.phone || "N/A"}</div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-sm font-medium text-muted-foreground">Address</span>
+                                            <div className="font-medium md:col-span-2">{client.address || "N/A"}</div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-sm font-medium text-muted-foreground">GST/HST Number</span>
+                                            <div className="font-medium">{client.vatNumber || "N/A"}</div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                        <div className="space-y-4">
+                            <ClientPortalAccess clientId={client.id} initialToken={client.portalToken} />
+                        </div>
+                    </div>
                 </TabsContent>
 
                 <TabsContent value="invoices">
@@ -204,6 +219,14 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
                                     )}
                                 </TableBody>
                             </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="projects">
+                    <Card>
+                        <CardContent className="pt-6">
+                            <ProjectList clientId={client.id} projects={projects} />
                         </CardContent>
                     </Card>
                 </TabsContent>

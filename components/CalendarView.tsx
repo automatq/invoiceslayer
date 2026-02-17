@@ -14,7 +14,7 @@ import {
     isSameDay,
     isToday
 } from "date-fns";
-import { ChevronLeft, ChevronRight, FileText, Receipt, RefreshCw, DollarSign } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, Receipt, RefreshCw, DollarSign, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InteractiveButton } from "@/components/ui/interactive-button";
 import { cn } from "@/lib/utils";
@@ -57,6 +57,7 @@ export function CalendarView({ events }: CalendarViewProps) {
             case "QUOTE": return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800";
             case "RECURRING": return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800";
             case "PAYMENT": return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800";
+            case "EXPENSE": return "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border-orange-200 dark:border-orange-800";
             default: return "bg-gray-100 text-gray-700";
         }
     };
@@ -67,6 +68,7 @@ export function CalendarView({ events }: CalendarViewProps) {
             case "QUOTE": return <Receipt className="h-3 w-3" />;
             case "RECURRING": return <RefreshCw className="h-3 w-3" />;
             case "PAYMENT": return <DollarSign className="h-3 w-3" />;
+            case "EXPENSE": return <CreditCard className="h-3 w-3" />;
         }
     };
 
