@@ -38,6 +38,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }),
     ],
     callbacks: {
+        authorized: authConfig.callbacks?.authorized,
         async session({ session, token }) {
             if (token.sub && session.user) {
                 session.user.id = token.sub;
@@ -47,6 +48,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         async jwt({ token }) {
             return token;
         },
-        ...authConfig.callbacks,
     },
 });
