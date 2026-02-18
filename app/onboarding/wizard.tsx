@@ -36,21 +36,21 @@ interface OnboardingWizardProps {
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
     return (
-        <div className="flex items-center justify-center gap-2 mb-8">
+        <div className="flex items-center justify-center gap-3 mb-10">
             {Array.from({ length: total }).map((_, i) => (
-                <div key={i} className="flex items-center gap-2">
+                <div key={i} className="flex items-center">
                     <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${i < current
-                            ? "bg-green-500 text-white shadow-lg shadow-green-500/20"
+                        className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black transition-all duration-500 border-2 ${i < current
+                            ? "bg-green-500 border-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]"
                             : i === current
-                                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                                : "bg-muted text-muted-foreground"
+                                ? "bg-white border-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)] scale-110"
+                                : "bg-neutral-800 border-neutral-700 text-neutral-500"
                             }`}
                     >
-                        {i < current ? <CheckCircle2 className="w-5 h-5" /> : i + 1}
+                        {i < current ? <CheckCircle2 className="w-5 h-5" strokeWidth={3} /> : i + 1}
                     </div>
                     {i < total - 1 && (
-                        <div className={`h-0.5 w-12 transition-all duration-300 ${i < current ? "bg-green-500" : "bg-muted"}`} />
+                        <div className={`h-[2px] w-12 transition-all duration-500 mx-1 ${i < current ? "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]" : "bg-neutral-800"}`} />
                     )}
                 </div>
             ))}
@@ -250,173 +250,154 @@ export function OnboardingWizard({ isCloudDeployment }: OnboardingWizardProps) {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-neutral-900 p-4 font-sans">
-            <div className={`w-full transition-all duration-500 ${step === 0 ? "max-w-4xl" : "max-w-xl"}`}>
+        <div className="flex items-center justify-center min-h-screen bg-neutral-950 p-4 font-sans selection:bg-primary/30">
+            <div className="w-full max-w-xl py-12">
+                {/* Branding / GIF */}
+                <div className="flex flex-col items-center justify-center mb-10 space-y-6">
+                    <div className="relative group">
+                        <div className="absolute -inset-2 bg-gradient-to-r from-primary to-blue-600 rounded-3xl blur-xl opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                        <Image
+                            src="/images/gifx.gif"
+                            alt="InvoiceSlayer"
+                            width={140}
+                            height={140}
+                            className="relative rounded-3xl object-cover shadow-2xl border-4 border-white/10 dark:border-neutral-800/50 bg-neutral-900"
+                            priority
+                            unoptimized
+                        />
+                    </div>
+                    <div className="text-center">
+                        <h1 className="text-4xl font-black italic tracking-tighter text-white">
+                            INVOICE<span className="text-primary tracking-normal">SLAYER</span>
+                        </h1>
+                        <p className="text-[10px] uppercase tracking-[0.4em] font-black text-white/40 mt-2">Onboarding Wizard</p>
+                    </div>
+                </div>
+
                 <StepIndicator current={step} total={3} />
 
                 {/* Step 0: Welcome */}
                 {step === 0 && (
-                    <Card className="border-none shadow-2xl bg-white/80 dark:bg-neutral-950/80 backdrop-blur-xl overflow-hidden">
-                        <CardContent className="p-0">
-                            <div className="grid grid-cols-1 md:grid-cols-2">
-                                {/* Left Column: Picture Section */}
-                                <div className="relative min-h-[300px] bg-slate-100 dark:bg-neutral-900 flex items-center justify-center overflow-hidden group">
-                                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-blue-600/5"></div>
-                                    <img
-                                        src="/images/gifx.gif"
-                                        alt="Onboarding"
-                                        className="relative z-10 w-4/5 h-auto rounded-3xl shadow-2xl border-8 border-white dark:border-neutral-800 transform group-hover:scale-105 transition-transform duration-700"
-                                    />
-                                    {/* Grain / Texture Overlay */}
-                                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+                    <Card className="border-none shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] bg-neutral-900/80 backdrop-blur-2xl overflow-hidden ring-1 ring-white/10">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-blue-500 to-primary/50"></div>
+                        <CardHeader className="text-center pt-10 pb-2">
+                            <CardTitle className="text-4xl font-black italic uppercase tracking-tighter text-white">Welcome Aboard</CardTitle>
+                            <CardDescription className="text-base font-bold text-white/50">
+                                Let's get your business profile set up in seconds.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-8">
+                            <DeploymentBanner isCloud={isCloudDeployment} />
+
+                            <div className="space-y-4 mb-10">
+                                <div className="flex items-center gap-4 group/item">
+                                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center shrink-0 border border-white/10 transition-all group-hover/item:bg-primary/20 group-hover/item:border-primary/50">
+                                        <CheckCircle2 className="w-6 h-6 text-green-500" strokeWidth={3} />
+                                    </div>
+                                    <div>
+                                        <span className="font-black italic uppercase tracking-tight text-white/90 text-lg">Professional Templates</span>
+                                        <p className="text-xs text-white/40 font-bold uppercase tracking-widest">Invoices & Quotes</p>
+                                    </div>
                                 </div>
-
-                                {/* Right Column: Content */}
-                                <div className="p-8 md:p-12 border-l border-border flex flex-col justify-center">
-                                    <div className="mb-8">
-                                        <h2 className="text-3xl font-black italic tracking-tighter text-slate-900 dark:text-white mb-2">
-                                            WELCOME<span className="text-primary tracking-normal"> ABOARD</span>
-                                        </h2>
-                                        <p className="text-muted-foreground font-medium">Ready to slay those invoices?</p>
+                                <div className="flex items-center gap-4 group/item text-white/90">
+                                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center shrink-0 border border-white/10 transition-all group-hover/item:bg-primary/20 group-hover/item:border-primary/50">
+                                        <CheckCircle2 className="w-6 h-6 text-green-500" strokeWidth={3} />
                                     </div>
-
-                                    <DeploymentBanner isCloud={isCloudDeployment} />
-
-                                    <div className="space-y-4 mb-10">
-                                        <div className="flex items-center gap-4 group/item">
-                                            <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-950/30 flex items-center justify-center shrink-0 transition-colors group-hover/item:bg-green-500/20">
-                                                <CheckCircle2 className="w-5 h-5 text-green-500" />
-                                            </div>
-                                            <span className="font-bold italic text-slate-700 dark:text-slate-200">Professional Templates</span>
-                                        </div>
-                                        <div className="flex items-center gap-4 group/item">
-                                            <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-950/30 flex items-center justify-center shrink-0 transition-colors group-hover/item:bg-green-500/20">
-                                                <CheckCircle2 className="w-5 h-5 text-green-500" />
-                                            </div>
-                                            <span className="font-bold italic text-slate-700 dark:text-slate-200">Tax & Currency Management</span>
-                                        </div>
-                                        <div className="flex items-center gap-4 group/item">
-                                            <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-950/30 flex items-center justify-center shrink-0 transition-colors group-hover/item:bg-green-500/20">
-                                                <CheckCircle2 className="w-5 h-5 text-green-500" />
-                                            </div>
-                                            <span className="font-bold italic text-slate-700 dark:text-slate-200">
-                                                {isCloudDeployment
-                                                    ? "AI-powered invoice generation"
-                                                    : "AI-powered generation via local Ollama"}
-                                            </span>
-                                        </div>
+                                    <div>
+                                        <span className="font-black italic uppercase tracking-tight text-white/90 text-lg">Tax & Currency</span>
+                                        <p className="text-xs text-white/40 font-bold uppercase tracking-widest">Automatic Management</p>
                                     </div>
-
-                                    <Button className="w-full h-14 text-lg font-black italic tracking-tight rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/30 active:scale-[0.98] transition-all" onClick={() => setStep(1)}>
-                                        GET STARTED <ArrowRight className="ml-2 w-5 h-5" />
-                                    </Button>
+                                </div>
+                                <div className="flex items-center gap-4 group/item text-white/90">
+                                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center shrink-0 border border-white/10 transition-all group-hover/item:bg-primary/20 group-hover/item:border-primary/50">
+                                        <CheckCircle2 className="w-6 h-6 text-green-500" strokeWidth={3} />
+                                    </div>
+                                    <div>
+                                        <span className="font-black italic uppercase tracking-tight text-white/90 text-lg">
+                                            {isCloudDeployment
+                                                ? "AI-powered generation"
+                                                : "Local AI (Ollama)"}
+                                        </span>
+                                        <p className="text-xs text-white/40 font-bold uppercase tracking-widest">Smart Automation</p>
+                                    </div>
                                 </div>
                             </div>
+
+                            <InteractiveButton className="w-full h-16 text-xl font-black italic tracking-tighter uppercase rounded-2xl shadow-2xl shadow-primary/20" onClick={() => setStep(1)}>
+                                BEGIN SETUP <ArrowRight className="ml-2 w-6 h-6" />
+                            </InteractiveButton>
                         </CardContent>
                     </Card>
                 )}
 
                 {/* Step 1: Company Details */}
                 {step === 1 && (
-                    <Card className="border-none shadow-2xl bg-white/80 dark:bg-neutral-950/80 backdrop-blur-xl overflow-hidden">
+                    <Card className="border-none shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] bg-neutral-900/80 backdrop-blur-2xl ring-1 ring-white/10 overflow-hidden">
                         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary via-blue-500 to-primary/50"></div>
-                        <CardHeader>
-                            <CardTitle className="text-2xl font-black italic uppercase tracking-tighter">Business Profile</CardTitle>
-                            <CardDescription className="font-medium">
+                        <CardHeader className="pt-10 pb-2">
+                            <CardTitle className="text-4xl font-black italic uppercase tracking-tighter text-white">Business Profile</CardTitle>
+                            <CardDescription className="text-base font-bold text-white/50">
                                 Essential details for your invoice headers.
                             </CardDescription>
                         </CardHeader>
                         <form onSubmit={handleSubmit(onSubmit)}>
-                            <CardContent className="space-y-5">
-                                <div className="space-y-2">
-                                    <Label htmlFor="companyName" className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Company Name</Label>
-                                    <Input
-                                        id="companyName"
-                                        {...register("companyName")}
-                                        placeholder="ACME CREATIVE CO."
-                                        className="h-12 rounded-xl border-2 border-transparent bg-slate-100 dark:bg-neutral-800 focus:bg-white dark:focus:bg-neutral-900 focus:border-primary transition-all font-bold italic placeholder:font-normal placeholder:not-italic"
-                                    />
-                                    {errors.companyName && <p className="text-[10px] font-bold text-red-500 ml-1 uppercase">{errors.companyName.message}</p>}
+                            <CardContent className="space-y-6 p-8">
+                                <div className="space-y-2 group">
+                                    <Label className="text-[10px] uppercase tracking-[0.4em] font-black text-white/30 group-focus-within:text-primary transition-colors ml-1">Company Name</Label>
+                                    <Input {...register("companyName")} placeholder="ACME CREATIVE CO." className="h-16 bg-white/[0.03] border-white/10 text-white rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all font-black placeholder:text-white/10 text-lg selection:bg-primary/30" />
+                                    {errors.companyName && <p className="text-[10px] uppercase font-black text-red-500 mt-1 ml-1">{errors.companyName.message}</p>}
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="companyEmail" className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Company Email</Label>
-                                    <Input
-                                        id="companyEmail"
-                                        type="email"
-                                        {...register("companyEmail")}
-                                        placeholder="HELLO@ACME.COM"
-                                        className="h-12 rounded-xl border-2 border-transparent bg-slate-100 dark:bg-neutral-800 focus:bg-white dark:focus:bg-neutral-900 focus:border-primary transition-all font-bold italic placeholder:font-normal placeholder:not-italic"
-                                    />
-                                    {errors.companyEmail && <p className="text-[10px] font-bold text-red-500 ml-1 uppercase">{errors.companyEmail.message}</p>}
+                                <div className="space-y-2 group">
+                                    <Label className="text-[10px] uppercase tracking-[0.4em] font-black text-white/30 group-focus-within:text-primary transition-colors ml-1">Company Email</Label>
+                                    <Input type="email" {...register("companyEmail")} placeholder="HELLO@ACME.COM" className="h-16 bg-white/[0.03] border-white/10 text-white rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all font-black placeholder:text-white/10 text-lg selection:bg-primary/30" />
+                                    {errors.companyEmail && <p className="text-[10px] uppercase font-black text-red-500 mt-1 ml-1">{errors.companyEmail.message}</p>}
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="companyAddress" className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Address</Label>
-                                        <Input
-                                            id="companyAddress"
-                                            {...register("companyAddress")}
-                                            placeholder="STREET NAME..."
-                                            className="h-12 rounded-xl border-2 border-transparent bg-slate-100 dark:bg-neutral-800 focus:bg-white dark:focus:bg-neutral-900 focus:border-primary transition-all font-bold italic placeholder:font-normal placeholder:not-italic text-xs"
-                                        />
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2 group">
+                                        <Label className="text-[10px] uppercase tracking-[0.4em] font-black text-white/30 group-focus-within:text-primary transition-colors ml-1">Address</Label>
+                                        <Input {...register("companyAddress")} placeholder="STREET NAME..." className="h-16 bg-white/[0.03] border-white/10 text-white rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all font-black placeholder:text-white/10 text-lg selection:bg-primary/30" />
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="companyPhone" className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Phone</Label>
-                                        <Input
-                                            id="companyPhone"
-                                            {...register("companyPhone")}
-                                            placeholder="+1..."
-                                            className="h-12 rounded-xl border-2 border-transparent bg-slate-100 dark:bg-neutral-800 focus:bg-white dark:focus:bg-neutral-900 focus:border-primary transition-all font-bold italic placeholder:font-normal placeholder:not-italic text-xs"
-                                        />
+                                    <div className="space-y-2 group">
+                                        <Label className="text-[10px] uppercase tracking-[0.4em] font-black text-white/30 group-focus-within:text-primary transition-colors ml-1">Phone</Label>
+                                        <Input {...register("companyPhone")} placeholder="+1..." className="h-16 bg-white/[0.03] border-white/10 text-white rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all font-black placeholder:text-white/10 text-lg selection:bg-primary/30" />
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Currency</Label>
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2 group">
+                                        <Label className="text-[10px] uppercase tracking-[0.4em] font-black text-white/30 group-focus-within:text-primary transition-colors ml-1">Currency</Label>
                                         <Select onValueChange={(value) => setValue("currency", value)} defaultValue="USD">
-                                            <SelectTrigger className="h-12 rounded-xl border-2 border-transparent bg-slate-100 dark:bg-neutral-800 font-bold italic">
-                                                <SelectValue placeholder="USD" />
+                                            <SelectTrigger className="h-16 bg-white/[0.03] border-white/10 text-white rounded-2xl focus:ring-2 focus:ring-primary/20 transition-all font-black text-lg">
+                                                <SelectValue placeholder="USD ($)" />
                                             </SelectTrigger>
-                                            <SelectContent className="rounded-xl border-2">
-                                                <SelectItem value="USD" className="font-bold italic">USD ($)</SelectItem>
-                                                <SelectItem value="EUR" className="font-bold italic">EUR (€)</SelectItem>
-                                                <SelectItem value="GBP" className="font-bold italic">GBP (£)</SelectItem>
-                                                <SelectItem value="CAD" className="font-bold italic">CAD ($)</SelectItem>
-                                                <SelectItem value="AUD" className="font-bold italic">AUD ($)</SelectItem>
-                                                <SelectItem value="JPY" className="font-bold italic">JPY (¥)</SelectItem>
-                                                <SelectItem value="CHF" className="font-bold italic">CHF (Fr)</SelectItem>
-                                                <SelectItem value="INR" className="font-bold italic">INR (₹)</SelectItem>
+                                            <SelectContent className="bg-neutral-900 border-white/10 text-white rounded-2xl">
+                                                <SelectItem value="USD" className="font-black italic uppercase">USD ($)</SelectItem>
+                                                <SelectItem value="EUR" className="font-black italic uppercase">EUR (€)</SelectItem>
+                                                <SelectItem value="GBP" className="font-black italic uppercase">GBP (£)</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        {errors.currency && <p className="text-[10px] font-bold text-red-500 ml-1 uppercase">{errors.currency.message}</p>}
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="defaultTaxRate" className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Default Tax (%)</Label>
+                                    <div className="space-y-2 group">
+                                        <Label className="text-[10px] uppercase tracking-[0.4em] font-black text-white/30 group-focus-within:text-primary transition-colors ml-1">Default Tax (%)</Label>
                                         <Input
-                                            id="defaultTaxRate"
                                             type="number"
-                                            step="0.01"
                                             {...register("defaultTaxRate", { valueAsNumber: true })}
                                             placeholder="13"
-                                            className="h-12 rounded-xl border-2 border-transparent bg-slate-100 dark:bg-neutral-800 focus:bg-white dark:focus:bg-neutral-900 focus:border-primary transition-all font-bold italic placeholder:font-normal placeholder:not-italic"
+                                            className="h-16 bg-white/[0.03] border-white/10 text-white rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all font-black placeholder:text-white/10 text-lg selection:bg-primary/30"
                                         />
-                                        {errors.defaultTaxRate && <p className="text-[10px] font-bold text-red-500 ml-1 uppercase">{errors.defaultTaxRate.message}</p>}
                                     </div>
                                 </div>
-
-                                <input type="hidden" {...register("invoiceTemplate")} />
-                                <input type="hidden" {...register("quoteTemplate")} />
                             </CardContent>
-                            <CardFooter className="flex gap-4 pt-4 pb-6">
-                                <InteractiveButton type="button" variant="outline" onClick={() => setStep(0)} className="flex-1 h-12 rounded-xl font-bold uppercase tracking-widest text-xs">
-                                    Back
-                                </InteractiveButton>
-                                <InteractiveButton type="submit" className="flex-2 w-full h-12 rounded-xl font-black italic uppercase tracking-tighter" disabled={isSubmitting} loading={isSubmitting}>
-                                    {!isSubmitting && "SAVE & CONTINUE"}
-                                    {!isSubmitting && <ArrowRight className="ml-2 w-4 h-4" />}
-                                </InteractiveButton>
+                            <CardFooter className="flex gap-4 p-8 pt-0">
+                                <Button type="button" variant="outline" onClick={() => setStep(0)} className="h-16 px-10 border-white/10 text-white/40 hover:text-white hover:bg-white/5 rounded-2xl font-black uppercase tracking-widest transition-all">
+                                    BACK
+                                </Button>
+                                <Button type="submit" className="flex-1 h-16 bg-white text-black hover:bg-white/90 rounded-2xl font-black italic uppercase tracking-tighter text-xl active:scale-[0.98] transition-all" disabled={isSubmitting}>
+                                    {isSubmitting ? "SAVING..." : "SAVE & CONTINUE"}
+                                    {!isSubmitting && <ArrowRight className="ml-2 w-6 h-6" />}
+                                </Button>
                             </CardFooter>
                         </form>
                     </Card>
@@ -424,25 +405,25 @@ export function OnboardingWizard({ isCloudDeployment }: OnboardingWizardProps) {
 
                 {/* Step 2: Setup Checklist */}
                 {step === 2 && (
-                    <Card className="border-none shadow-2xl bg-white/80 dark:bg-neutral-950/80 backdrop-blur-xl">
-                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-green-500 via-emerald-400 to-green-500"></div>
-                        <CardHeader className="text-center">
-                            <CardTitle className="text-3xl font-black italic tracking-tight flex items-center justify-center gap-3">
-                                MISSION COMPLETE <CheckCircle2 className="w-8 h-8 text-green-500 fill-green-500/10" />
+                    <Card className="border-none shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] bg-neutral-900/80 backdrop-blur-2xl ring-1 ring-white/10 overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-green-500 via-emerald-400 to-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]"></div>
+                        <CardHeader className="text-center pt-10 pb-6">
+                            <CardTitle className="text-4xl font-black italic uppercase tracking-tighter text-white flex items-center justify-center gap-4">
+                                MISSION COMPLETE <CheckCircle2 className="w-10 h-10 text-green-500" strokeWidth={3} />
                             </CardTitle>
-                            <CardDescription className="text-base font-medium">
+                            <CardDescription className="text-base font-bold text-white/50">
                                 {isCloudDeployment
                                     ? "Pro profile unlocked. Here's what we recommend next."
-                                    : "Business engine started. All features are now available to explorer."}
+                                    : "Business engine started. All features are now available to explore."}
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="pt-2 pb-6">
+                        <CardContent className="p-8">
                             <SetupChecklist isCloud={isCloudDeployment} />
                         </CardContent>
-                        <CardFooter>
-                            <InteractiveButton className="w-full h-14 rounded-2xl text-lg font-black italic tracking-tight" onClick={() => router.push("/")}>
-                                GO TO BRAIN <ArrowRight className="ml-2 w-5 h-5" />
-                            </InteractiveButton>
+                        <CardFooter className="p-8 pt-0">
+                            <Button className="w-full h-16 bg-white text-black hover:bg-white/90 rounded-2xl font-black italic uppercase tracking-tighter text-xl active:scale-[0.98] transition-all" onClick={() => router.push("/")}>
+                                GO TO DASHBOARD <ArrowRight className="ml-2 w-6 h-6" />
+                            </Button>
                         </CardFooter>
                     </Card>
                 )}
