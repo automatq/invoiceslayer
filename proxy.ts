@@ -24,6 +24,7 @@ const SECURITY_HEADERS = {
 const CRON_ROUTES = ["/api/cron/recurring", "/api/cron/reminders"];
 const AUTH_ROUTES = ["/login", "/register", "/api/auth"];
 const PUBLIC_PORTAL_ROUTES = ["/p/", "/portal/"];
+const PUBLIC_APP_ROUTES = ["/onboarding"];
 
 export default auth((req) => {
     const { pathname } = req.nextUrl;
@@ -51,7 +52,10 @@ export default auth((req) => {
     }
 
     if (!isLoggedIn && !isPublicPortalRoute) {
-        return NextResponse.redirect(new URL("/login", req.url));
+        const isPublicAppRoute = PUBLIC_APP_ROUTES.some((route) => pathname.startsWith(route));
+        if (!isPublicAppRoute) {
+            return NextResponse.redirect(new URL("/login", req.url));
+        }
     }
 
     // 3. Security Headers
