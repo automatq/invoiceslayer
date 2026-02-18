@@ -24,7 +24,7 @@ const SECURITY_HEADERS = {
 const CRON_ROUTES = ["/api/cron/recurring", "/api/cron/reminders"];
 const AUTH_ROUTES = ["/login", "/register", "/api/auth"];
 const PUBLIC_PORTAL_ROUTES = ["/p/", "/portal/"];
-const PUBLIC_APP_ROUTES = ["/onboarding"];
+const PUBLIC_APP_ROUTES = ["/onboarding", "/images"];
 
 export default auth((req) => {
     const { pathname } = req.nextUrl;
@@ -68,6 +68,6 @@ export default auth((req) => {
 });
 
 export const config = {
-    matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)", "/api/cron/:path*"],
+    matcher: ["/((?!api|_next/static|_next/image|favicon.ico|images).*)", "/api/cron/:path*"],
 };
 

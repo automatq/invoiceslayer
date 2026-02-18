@@ -15,6 +15,7 @@ import Image from "next/image";
 import { CheckCircle2, ArrowRight, Server, Cloud, Mail, CreditCard, Bot, Zap, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { InteractiveButton } from "@/components/ui/interactive-button";
+import { Button } from "@/components/ui/button";
 
 const SettingsSchema = z.object({
     companyName: z.string().min(1, "Company name is required"),
@@ -40,10 +41,10 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
                 <div key={i} className="flex items-center gap-2">
                     <div
                         className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${i < current
-                                ? "bg-green-500 text-white shadow-lg shadow-green-500/20"
-                                : i === current
-                                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                                    : "bg-muted text-muted-foreground"
+                            ? "bg-green-500 text-white shadow-lg shadow-green-500/20"
+                            : i === current
+                                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                                : "bg-muted text-muted-foreground"
                             }`}
                     >
                         {i < current ? <CheckCircle2 className="w-5 h-5" /> : i + 1}
@@ -174,8 +175,8 @@ function SetupChecklist({ isCloud }: { isCloud: boolean }) {
                     key={i}
                     href={item.href}
                     className={`flex items-start gap-4 p-4 rounded-xl border transition-all duration-300 ${item.done
-                            ? "border-green-200 bg-green-50/50 dark:border-green-900/30 dark:bg-green-950/20 cursor-default pointer-events-none"
-                            : "border-border hover:border-primary/40 hover:bg-muted/50 hover:shadow-sm cursor-pointer"
+                        ? "border-green-200 bg-green-50/50 dark:border-green-900/30 dark:bg-green-950/20 cursor-default pointer-events-none"
+                        : "border-border hover:border-primary/40 hover:bg-muted/50 hover:shadow-sm cursor-pointer"
                         }`}
                 >
                     <div className="mt-0.5 shrink-0 bg-white dark:bg-neutral-800 p-2 rounded-lg shadow-sm border border-border">
@@ -186,10 +187,10 @@ function SetupChecklist({ isCloud }: { isCloud: boolean }) {
                             <p className="text-sm font-bold italic">{item.title}</p>
                             {item.badge && (
                                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.badge === "Required"
-                                        ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
-                                        : item.badge === "Recommended"
-                                            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300"
-                                            : "bg-muted text-muted-foreground"
+                                    ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
+                                    : item.badge === "Recommended"
+                                        ? "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300"
+                                        : "bg-muted text-muted-foreground"
                                     }`}>
                                     {item.badge}
                                 </span>
@@ -250,68 +251,68 @@ export function OnboardingWizard({ isCloudDeployment }: OnboardingWizardProps) {
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-neutral-900 p-4 font-sans">
-            <div className="w-full max-w-xl">
-                {/* Branding / GIF */}
-                <div className="flex flex-col items-center justify-center mb-10 space-y-4">
-                    <div className="relative group">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-primary to-blue-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-                        <Image
-                            src="/images/gifx.gif"
-                            alt="InvoiceSlayer"
-                            width={160}
-                            height={160}
-                            className="relative rounded-2xl object-cover shadow-2xl border-4 border-white dark:border-neutral-800"
-                            priority
-                            unoptimized
-                        />
-                    </div>
-                    <div className="text-center">
-                        <h1 className="text-3xl font-black italic tracking-tighter text-slate-900 dark:text-white">
-                            INVOICE<span className="text-primary tracking-normal">SLAYER</span>
-                        </h1>
-                        <p className="text-xs uppercase tracking-[0.2em] font-bold text-muted-foreground mt-1">Onboarding Wizard</p>
-                    </div>
-                </div>
-
+            <div className={`w-full transition-all duration-500 ${step === 0 ? "max-w-4xl" : "max-w-xl"}`}>
                 <StepIndicator current={step} total={3} />
 
                 {/* Step 0: Welcome */}
                 {step === 0 && (
-                    <Card className="border-none shadow-2xl bg-white/80 dark:bg-neutral-950/80 backdrop-blur-xl">
-                        <CardHeader className="text-center pb-2">
-                            <CardTitle className="text-3xl font-black italic tracking-tight underline-offset-8 decoration-primary/30">Welcome Aboard</CardTitle>
-                            <CardDescription className="text-base font-medium">
-                                Let's get your business profile set up in seconds.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="pt-6">
-                            <DeploymentBanner isCloud={isCloudDeployment} />
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="flex items-center gap-3 p-3 rounded-xl bg-orange-50/50 dark:bg-orange-950/10 border border-orange-100/50 dark:border-orange-900/20">
-                                    <Zap className="w-5 h-5 text-orange-500 shrink-0" />
-                                    <span className="text-xs font-bold italic text-orange-900 dark:text-orange-100">Pro Invoicing</span>
+                    <Card className="border-none shadow-2xl bg-white/80 dark:bg-neutral-950/80 backdrop-blur-xl overflow-hidden">
+                        <CardContent className="p-0">
+                            <div className="grid grid-cols-1 md:grid-cols-2">
+                                {/* Left Column: Picture Section */}
+                                <div className="relative min-h-[300px] bg-slate-100 dark:bg-neutral-900 flex items-center justify-center overflow-hidden group">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-blue-600/5"></div>
+                                    <img
+                                        src="/images/gifx.gif"
+                                        alt="Onboarding"
+                                        className="relative z-10 w-4/5 h-auto rounded-3xl shadow-2xl border-8 border-white dark:border-neutral-800 transform group-hover:scale-105 transition-transform duration-700"
+                                    />
+                                    {/* Grain / Texture Overlay */}
+                                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
                                 </div>
-                                <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-50/50 dark:bg-blue-950/10 border border-blue-100/50 dark:border-blue-900/20">
-                                    <Bot className="w-5 h-5 text-blue-500 shrink-0" />
-                                    <span className="text-xs font-bold italic text-blue-900 dark:text-blue-100">AI Powered</span>
-                                </div>
-                                <div className="flex items-center gap-3 p-3 rounded-xl bg-purple-50/50 dark:bg-purple-950/10 border border-purple-100/50 dark:border-purple-900/20">
-                                    <CreditCard className="w-5 h-5 text-purple-500 shrink-0" />
-                                    <span className="text-xs font-bold italic text-purple-900 dark:text-purple-100">Global Payments</span>
-                                </div>
-                                <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-100/50 dark:border-emerald-900/20 transition-all">
-                                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-                                    <span className="text-xs font-bold italic text-emerald-900 dark:text-emerald-100">
-                                        {isCloudDeployment ? "Cloud Core" : "Local First"}
-                                    </span>
+
+                                {/* Right Column: Content */}
+                                <div className="p-8 md:p-12 border-l border-border flex flex-col justify-center">
+                                    <div className="mb-8">
+                                        <h2 className="text-3xl font-black italic tracking-tighter text-slate-900 dark:text-white mb-2">
+                                            WELCOME<span className="text-primary tracking-normal"> ABOARD</span>
+                                        </h2>
+                                        <p className="text-muted-foreground font-medium">Ready to slay those invoices?</p>
+                                    </div>
+
+                                    <DeploymentBanner isCloud={isCloudDeployment} />
+
+                                    <div className="space-y-4 mb-10">
+                                        <div className="flex items-center gap-4 group/item">
+                                            <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-950/30 flex items-center justify-center shrink-0 transition-colors group-hover/item:bg-green-500/20">
+                                                <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                            </div>
+                                            <span className="font-bold italic text-slate-700 dark:text-slate-200">Professional Templates</span>
+                                        </div>
+                                        <div className="flex items-center gap-4 group/item">
+                                            <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-950/30 flex items-center justify-center shrink-0 transition-colors group-hover/item:bg-green-500/20">
+                                                <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                            </div>
+                                            <span className="font-bold italic text-slate-700 dark:text-slate-200">Tax & Currency Management</span>
+                                        </div>
+                                        <div className="flex items-center gap-4 group/item">
+                                            <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-950/30 flex items-center justify-center shrink-0 transition-colors group-hover/item:bg-green-500/20">
+                                                <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                            </div>
+                                            <span className="font-bold italic text-slate-700 dark:text-slate-200">
+                                                {isCloudDeployment
+                                                    ? "AI-powered invoice generation"
+                                                    : "AI-powered generation via local Ollama"}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <Button className="w-full h-14 text-lg font-black italic tracking-tight rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/30 active:scale-[0.98] transition-all" onClick={() => setStep(1)}>
+                                        GET STARTED <ArrowRight className="ml-2 w-5 h-5" />
+                                    </Button>
                                 </div>
                             </div>
                         </CardContent>
-                        <CardFooter className="pt-2">
-                            <InteractiveButton className="w-full h-14 rounded-2xl text-lg font-black italic tracking-tight" onClick={() => setStep(1)}>
-                                BEGIN SETUP <ArrowRight className="ml-2 w-5 h-5" />
-                            </InteractiveButton>
-                        </CardFooter>
                     </Card>
                 )}
 
@@ -446,6 +447,6 @@ export function OnboardingWizard({ isCloudDeployment }: OnboardingWizardProps) {
                     </Card>
                 )}
             </div>
-        </div>
+        </div >
     );
 }
