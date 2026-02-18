@@ -3,19 +3,18 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
-async function getSession() {
+async function getRequiredSession() {
     const session = await auth();
     if (!session?.user?.id) {
         throw new Error("Unauthorized");
     }
-    return session;
+    return { userId: session.user.id, session };
 }
 
 export async function getRevenueByMonth(year: number = new Date().getFullYear(), basis: "accrual" | "cash" = "accrual") {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year + 1, 0, 1);
-    const userId = session.user.id;
 
     const monthlyData = Array.from({ length: 12 }, (_, i) => ({
         name: new Date(year, i).toLocaleString('default', { month: 'short' }),
@@ -91,9 +90,9 @@ export async function getRevenueByMonth(year: number = new Date().getFullYear(),
 }
 
 export async function getTopCustomers(limit: number = 5) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     const clients = await prisma.client.findMany({
-        where: { userId: session.user.id },
+        where: { userId },
         include: {
             invoices: { where: { status: "PAID" } }
         }
@@ -110,8 +109,7 @@ export async function getTopCustomers(limit: number = 5) {
 }
 
 export async function getInvoiceStatusDistribution() {
-    const session = await getSession();
-    const userId = session.user.id;
+    const { userId } = await getRequiredSession();
     const statusCounts = await prisma.invoice.groupBy({
         where: { userId },
         by: ['status'],
@@ -148,8 +146,7 @@ export async function getInvoiceStatusDistribution() {
 }
 
 export async function getDashboardMetrics(year: number = new Date().getFullYear(), basis: "accrual" | "cash" = "accrual") {
-    const session = await getSession();
-    const userId = session.user.id;
+    const { userId } = await getRequiredSession();
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year + 1, 0, 1);
 

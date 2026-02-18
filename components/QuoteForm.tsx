@@ -90,17 +90,11 @@ export function QuoteForm({ clients, initialData, defaultTaxRate = 13 }: { clien
 
     const onSubmit = async (data: QuoteFormValues) => {
         try {
-            const formattedData = {
-                ...data,
-                date: data.date.toISOString(),
-                expiryDate: data.expiryDate.toISOString(),
-            };
-
             let result;
             if (initialData) {
-                result = await updateQuote(initialData.id, formattedData);
+                result = await updateQuote(initialData.id, data);
             } else {
-                result = await createQuote(formattedData);
+                result = await createQuote(data);
             }
 
             if (result.success) {

@@ -5,26 +5,26 @@ import { revalidatePath } from "next/cache";
 import { randomBytes } from "crypto";
 import { auth } from "@/lib/auth";
 
-async function getSession() {
+async function getRequiredSession() {
     const session = await auth();
     if (!session?.user?.id) {
         throw new Error("Unauthorized");
     }
-    return session;
+    return { userId: session.user.id, session };
 }
 
 export async function generateApiKey() {
-    const session = await getSession();
+    const { userId, session } = await getRequiredSession();
     try {
         const apiKey = "ag_" + randomBytes(24).toString("hex");
 
         await db.setting.upsert({
-            where: { userId: session.user.id },
+            where: { userId },
             update: { agentApiKey: apiKey },
             create: {
-                userId: session.user.id,
-                companyName: session.user.name || "My Company",
-                companyEmail: session.user.email || "",
+                userId,
+                companyName: session.user?.name || "My Company",
+                companyEmail: session.user?.email || "",
                 agentApiKey: apiKey,
             }
         });
@@ -38,10 +38,10 @@ export async function generateApiKey() {
 }
 
 export async function revokeApiKey() {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     try {
         await db.setting.update({
-            where: { userId: session.user.id },
+            where: { userId },
             data: { agentApiKey: null },
         });
 

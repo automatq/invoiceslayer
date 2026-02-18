@@ -3,21 +3,21 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
-async function getSession() {
+async function getRequiredSession() {
     const session = await auth();
     if (!session?.user?.id) {
         throw new Error("Unauthorized");
     }
-    return session;
+    return { userId: session.user.id, session };
 }
 
 export async function searchClients(query: string) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     if (!query || query.length < 2) return [];
 
     const clients = await prisma.client.findMany({
         where: {
-            userId: session.user.id,
+            userId,
             OR: [
                 { name: { contains: query } },
                 { email: { contains: query } },
@@ -35,12 +35,12 @@ export async function searchClients(query: string) {
 }
 
 export async function searchInvoices(query: string) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     if (!query || query.length < 2) return [];
 
     const invoices = await prisma.invoice.findMany({
         where: {
-            userId: session.user.id,
+            userId,
             OR: [
                 { number: { contains: query } },
                 { client: { name: { contains: query } } },

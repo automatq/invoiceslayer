@@ -5,12 +5,12 @@ import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
 import { auth } from "@/lib/auth";
 
-async function getSession() {
+async function getRequiredSession() {
     const session = await auth();
     if (!session?.user?.id) {
         throw new Error("Unauthorized");
     }
-    return session;
+    return { userId: session.user.id, session };
 }
 
 export async function getClientByPortalToken(token: string) {
@@ -49,13 +49,13 @@ export async function getClientByPortalToken(token: string) {
 }
 
 export async function regeneratePortalToken(clientId: string) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     try {
         const token = uuidv4();
         await prisma.client.update({
             where: {
                 id: clientId,
-                userId: session.user.id,
+                userId,
             },
             data: { portalToken: token },
         });
@@ -69,11 +69,11 @@ export async function regeneratePortalToken(clientId: string) {
 }
 
 export async function ensureClientHasToken(clientId: string) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     const client = await prisma.client.findUnique({
         where: {
             id: clientId,
-            userId: session.user.id,
+            userId,
         },
         select: { portalToken: true }
     });

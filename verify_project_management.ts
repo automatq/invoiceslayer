@@ -9,12 +9,21 @@ async function verify() {
     console.log('Starting verification...');
 
     try {
+        // 0. Get a test user
+        const user = await prisma.user.findFirst();
+        if (!user) {
+            console.error("No user found in database. Please register a user first.");
+            process.exit(1);
+        }
+        const userId = user.id;
+
         // 1. Create a Client
         console.log('Creating client...');
         const client = await prisma.client.create({
             data: {
                 name: 'Test Client Project Mgmt',
                 email: 'test@projectmgmt.com',
+                userId
             },
         });
         console.log('Client created:', client.id);
@@ -27,6 +36,7 @@ async function verify() {
                 description: 'A test project for verification',
                 clientId: client.id,
                 status: 'ACTIVE',
+                userId
             },
         });
         console.log('Project created:', project.id);
@@ -38,6 +48,7 @@ async function verify() {
                 number: 'INV-TEST-PROJ-001',
                 clientId: client.id,
                 projectId: project.id, // Link to project
+                userId,
                 date: new Date(),
                 dueDate: new Date(),
                 status: 'DRAFT',
@@ -64,6 +75,7 @@ async function verify() {
                 number: 'EST-TEST-PROJ-001',
                 clientId: client.id,
                 projectId: project.id, // Link to project
+                userId,
                 date: new Date(),
                 expiryDate: new Date(),
                 status: 'DRAFT',
@@ -92,7 +104,8 @@ async function verify() {
                 amount: 50.00,
                 date: new Date(),
                 category: 'Materials',
-                projectId: project.id // Link to project
+                projectId: project.id, // Link to project
+                userId
             },
             include: { project: true }
         });

@@ -10,13 +10,14 @@ interface AiResponse {
     data?: any;
 }
 
-async function getSession() {
+async function getRequiredSession() {
     const session = await auth();
     if (!session?.user?.id) {
         throw new Error("Unauthorized");
     }
-    return session;
+    return { userId: session.user.id, session };
 }
+
 
 /**
  * Tests the connection to the local AI by attempting to list models or run a simple prompt.
@@ -63,10 +64,10 @@ export async function testLocalAiConnection(url: string, model: string): Promise
  * Saves the Local AI settings for the user.
  */
 export async function saveLocalAiSettings(url: string, model: string) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     try {
         await prisma.setting.update({
-            where: { userId: session.user.id },
+            where: { userId },
             data: {
                 localAiUrl: url,
                 localAiModel: model
@@ -78,6 +79,7 @@ export async function saveLocalAiSettings(url: string, model: string) {
         return { success: false, message: error.message };
     }
 }
+
 
 /**
  * Generic function to generate text using the user's configured Local AI.

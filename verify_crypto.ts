@@ -3,26 +3,31 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { prisma } from "./lib/prisma";
-import { generateApiKey } from "./app/actions/api-keys";
 
 async function main() {
     console.log("Starting Crypto Payment API Verification...");
 
-    // 1. Get/Generate API Key
-    console.log("Ensuring API Key...");
-    const keyResult = await generateApiKey();
-    if (!keyResult.success || !keyResult.apiKey) {
-        console.error("Failed to generate API Key");
+    // 1. Get a test user
+    const user = await prisma.user.findFirst();
+    if (!user) {
+        console.error("No user found in database. Please register a user first.");
         process.exit(1);
     }
-    const API_KEY = keyResult.apiKey;
+    const userId = user.id;
+
+    // Use a mock API key for type safety in this script if the action can't be called
+    const API_KEY = "ag_test_key_for_verification";
 
     const BASE_URL = "http://localhost:3000/api/v1/agent";
 
     // 2. Create a specific test client and invoice directly via Prisma (faster setup)
     console.log("\nSetting up test data...");
     const client = await prisma.client.create({
-        data: { name: "Crypto Test Client", email: "crypto@test.com" }
+        data: {
+            name: "Crypto Test Client",
+            email: "crypto@test.com",
+            userId
+        }
     });
 
     const invoice = await prisma.invoice.create({
@@ -31,6 +36,7 @@ async function main() {
             date: new Date(),
             dueDate: new Date(),
             clientId: client.id,
+            userId,
             status: "SENT",
             total: 100,
             items: {

@@ -7,12 +7,12 @@ import { createNotification } from "@/app/actions/notifications";
 import { auth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
 
-async function getSession() {
+async function getRequiredSession() {
     const session = await auth();
     if (!session?.user?.id) {
         throw new Error("Unauthorized");
     }
-    return session;
+    return { userId: session.user.id, session };
 }
 
 const PaymentSchema = z.object({
@@ -30,7 +30,7 @@ export async function recordPayment(data: {
     method: string;
     notes?: string;
 }) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     const validatedData = PaymentSchema.safeParse(data);
 
     if (!validatedData.success) {
@@ -42,7 +42,6 @@ export async function recordPayment(data: {
     }
 
     const { invoiceId, amount, date, method, notes } = validatedData.data;
-    const userId = session.user.id;
 
     try {
         const result = await prisma.$transaction(async (tx: any) => {
@@ -107,16 +106,15 @@ export async function recordPayment(data: {
 }
 
 export async function getPayments(invoiceId: string) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     return await prisma.payment.findMany({
-        where: { invoiceId, invoice: { userId: session.user.id } },
+        where: { invoiceId, invoice: { userId } },
         orderBy: { date: "desc" },
     });
 }
 
 export async function deletePayment(paymentId: string, invoiceId: string) {
-    const session = await getSession();
-    const userId = session.user.id;
+    const { userId } = await getRequiredSession();
     try {
         await prisma.$transaction(async (tx: any) => {
             const payment = await tx.payment.findUnique({

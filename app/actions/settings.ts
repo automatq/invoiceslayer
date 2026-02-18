@@ -6,12 +6,12 @@ import { unstable_noStore as noStore } from "next/cache";
 import { logAuditEvent } from "@/lib/audit";
 import { auth } from "@/lib/auth";
 
-async function getSession() {
+async function getRequiredSession() {
     const session = await auth();
     if (!session?.user?.id) {
         throw new Error("Unauthorized");
     }
-    return session;
+    return { userId: session.user.id, session };
 }
 
 export type SettingsFormValues = {
@@ -36,22 +36,22 @@ export type SettingsFormValues = {
 };
 
 export async function createSettings(data: SettingsFormValues) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     try {
         const existing = await prisma.setting.findUnique({
-            where: { userId: session.user.id }
+            where: { userId }
         });
 
         if (existing) {
             await prisma.setting.update({
-                where: { userId: session.user.id },
+                where: { userId },
                 data
             });
         } else {
             await prisma.setting.create({
                 data: {
                     ...data,
-                    userId: session.user.id
+                    userId
                 }
             });
         }
@@ -60,7 +60,7 @@ export async function createSettings(data: SettingsFormValues) {
         await logAuditEvent({
             action: "SETTINGS_CHANGE",
             resource: "Settings",
-            userId: session.user.id
+            userId
         });
         return { success: true };
     } catch (e) {
@@ -91,7 +91,6 @@ export async function getSettings(userId?: string) {
     }
 }
 
-
 export async function getCompanyLogo(userId?: string) {
     noStore();
     try {
@@ -114,11 +113,9 @@ export async function getCompanyLogo(userId?: string) {
     }
 }
 
-
 export async function purgeAllData() {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     try {
-        const userId = session.user.id;
         await prisma.$transaction([
             prisma.payment.deleteMany({ where: { invoice: { userId } } }),
             prisma.invoiceItem.deleteMany({ where: { invoice: { userId } } }),
@@ -142,7 +139,7 @@ export async function purgeAllData() {
         await logAuditEvent({
             action: "DATA_PURGE",
             resource: "System",
-            userId: session.user.id,
+            userId,
             metadata: { purgedAt: new Date().toISOString() }
         });
         return { success: true };

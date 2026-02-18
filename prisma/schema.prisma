@@ -11,27 +11,27 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  accounts      Account[]
-  sessions      Session[]
-  clients       Client[]
-  invoices      Invoice[]
-  quotes        Quote[]
-  projects      Project[]
-  expenses      Expense[]
-  recurring     RecurringInvoice[]
-  settings      Setting[]
-  notifications Notification[]
-  auditLogs     AuditLog[]
+  id              String             @id @default(cuid())
+  name            String?
+  email           String?            @unique
+  emailVerified   DateTime?
+  image           String?
+  password        String?
+  accounts        Account[]
+  sessions        Session[]
+  clients         Client[]
+  invoices        Invoice[]
+  quotes          Quote[]
+  projects        Project[]
+  expenses        Expense[]
+  recurring       RecurringInvoice[]
+  settings        Setting[]
+  notifications   Notification[]
+  auditLogs       AuditLog[]
   invoiceTemplate InvoiceTemplate?
-  createdAt     DateTime  @default(now())
+  createdAt       DateTime           @default(now())
 
-  updatedAt     DateTime  @updatedAt
+  updatedAt DateTime @updatedAt
 }
 
 model Account {
@@ -91,42 +91,42 @@ model Client {
 }
 
 model Invoice {
-  id         String        @id @default(cuid())
-  number     String
-  date       DateTime
-  dueDate    DateTime
-  status     String        @default("DRAFT") // DRAFT, SENT, PAID, OVERDUE, CANCELLED, PARTIAL
-  clientId   String
-  client     Client        @relation(fields: [clientId], references: [id])
-  userId     String
-  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items      InvoiceItem[]
-  subtotal   Float         @default(0)
-  taxTotal   Float         @default(0)
-  total      Float
-  amountPaid Float         @default(0)
-  payments   Payment[]
-  projectId  String?
-  project    Project?      @relation(fields: [projectId], references: [id])
-  notes      String?
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  id             String          @id @default(cuid())
+  number         String
+  date           DateTime
+  dueDate        DateTime
+  status         String          @default("DRAFT") // DRAFT, SENT, PAID, OVERDUE, CANCELLED, PARTIAL
+  clientId       String
+  client         Client          @relation(fields: [clientId], references: [id])
+  userId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items          InvoiceItem[]
+  subtotal       Float           @default(0)
+  taxTotal       Float           @default(0)
+  total          Float
+  amountPaid     Float           @default(0)
+  payments       Payment[]
+  projectId      String?
+  project        Project?        @relation(fields: [projectId], references: [id])
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
   escrowContract EscrowContract?
 
   @@unique([userId, number])
 }
 
 model EscrowContract {
-  id          String   @id @default(cuid())
-  invoiceId   String   @unique
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  platform    String   // e.g., "FIGMA", "GITHUB"
-  resourceId  String   // URL or ID of the resource to check
-  condition   String   // e.g., "APPROVED", "MERGED"
-  status      String   @default("PENDING") // PENDING, RELEASED, CANCELLED
-  amount      Float
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  invoiceId  String   @unique
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  platform   String // e.g., "FIGMA", "GITHUB"
+  resourceId String // URL or ID of the resource to check
+  condition  String // e.g., "APPROVED", "MERGED"
+  status     String   @default("PENDING") // PENDING, RELEASED, CANCELLED
+  amount     Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Quote {
@@ -193,10 +193,10 @@ model RecurringInvoice {
   client            Client   @relation(fields: [clientId], references: [id])
   userId            String
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items             String   // JSON string of items
-  frequency         String   // WEEKLY, MONTHLY, QUARTERLY, YEARLY
+  items             String // JSON string of items
+  frequency         String // WEEKLY, MONTHLY, QUARTERLY, YEARLY
   nextRunDate       DateTime
-  maxOccurrences    Int?     // NULL means infinite
+  maxOccurrences    Int? // NULL means infinite
   currentOccurrence Int      @default(0)
   isActive          Boolean  @default(true)
   notes             String?
@@ -205,37 +205,37 @@ model RecurringInvoice {
 }
 
 model Setting {
-  id             String   @id @default(cuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  companyName    String
-  companyEmail   String
-  companyAddress String?
-  companyPhone   String?
-  companyLogo    String?
-  companyWebsite String?
-  companyTaxId   String?
-  paymentInstructions String?
-  currency       String   @default("USD")
-  defaultTaxRate Float    @default(13)
-  invoiceTemplate String   @default("modern")
-  quoteTemplate   String   @default("modern")
-  resendApiKey    String?
+  id                   String   @id @default(cuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName          String
+  companyEmail         String
+  companyAddress       String?
+  companyPhone         String?
+  companyLogo          String?
+  companyWebsite       String?
+  companyTaxId         String?
+  paymentInstructions  String?
+  currency             String   @default("USD")
+  defaultTaxRate       Float    @default(13)
+  invoiceTemplate      String   @default("modern")
+  quoteTemplate        String   @default("modern")
+  resendApiKey         String?
   stripePublishableKey String?
-  stripeSecretKey String?
-  cryptoWalletAddress String?
-  agentApiKey    String?  @unique
-  localAiUrl     String   @default("http://localhost:11434/v1")
-  localAiModel   String   @default("llama3")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  stripeSecretKey      String?
+  cryptoWalletAddress  String?
+  agentApiKey          String?  @unique
+  localAiUrl           String   @default("http://localhost:11434/v1")
+  localAiModel         String   @default("llama3")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   @@unique([userId])
 }
 
 model Notification {
   id        String   @id @default(cuid())
-  type      String   // INFO, WARNING, SUCCESS, ERROR
+  type      String // INFO, WARNING, SUCCESS, ERROR
   title     String
   message   String?
   read      Boolean  @default(false)
@@ -294,16 +294,15 @@ model InvoiceTemplate {
   @@unique([userId])
 }
 
-
 // SOC2 Audit Log — records all significant data operations
 model AuditLog {
   id         String   @id @default(cuid())
-  action     String   // CREATE, UPDATE, DELETE, VIEW, EXPORT, SETTINGS_CHANGE, DATA_PURGE
-  resource   String   // Invoice, Client, Quote, Payment, Settings, etc.
-  resourceId String?  // ID of the affected record
+  action     String // CREATE, UPDATE, DELETE, VIEW, EXPORT, SETTINGS_CHANGE, DATA_PURGE
+  resource   String // Invoice, Client, Quote, Payment, Settings, etc.
+  resourceId String? // ID of the affected record
   actor      String   @default("system") // "system" or user identifier
   ipAddress  String?
-  metadata   String?  // JSON string with additional context
+  metadata   String? // JSON string with additional context
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())

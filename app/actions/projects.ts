@@ -5,18 +5,18 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
 
-async function getSession() {
+async function getRequiredSession() {
     const session = await auth();
     if (!session?.user?.id) {
         throw new Error("Unauthorized");
     }
-    return session;
+    return { userId: session.user.id, session };
 }
 
 export async function getProjects(clientId?: string) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     try {
-        const where: any = { userId: session.user.id };
+        const where: any = { userId };
         if (clientId) where.clientId = clientId;
 
         const projects = await prisma.project.findMany({
@@ -37,12 +37,12 @@ export async function getProjects(clientId?: string) {
 }
 
 export async function getProject(id: string) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     try {
         const project = await prisma.project.findUnique({
             where: {
                 id,
-                userId: session.user.id,
+                userId,
             },
             include: {
                 client: true,
@@ -59,7 +59,7 @@ export async function getProject(id: string) {
 }
 
 export async function createProject(data: { name: string; description?: string; clientId: string; status?: string }) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     try {
         const project = await prisma.project.create({
             data: {
@@ -67,15 +67,16 @@ export async function createProject(data: { name: string; description?: string; 
                 description: data.description,
                 status: data.status || "ACTIVE",
                 client: { connect: { id: data.clientId } },
-                userId: session.user.id,
+                user: { connect: { id: userId } },
             }
         });
+
 
         await logAuditEvent({
             action: "CREATE",
             resource: "Project",
             resourceId: project.id,
-            userId: session.user.id
+            userId
         });
 
         revalidatePath("/projects");
@@ -88,12 +89,12 @@ export async function createProject(data: { name: string; description?: string; 
 }
 
 export async function updateProject(id: string, data: { name?: string; description?: string; status?: string }) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     try {
         const project = await prisma.project.update({
             where: {
                 id,
-                userId: session.user.id,
+                userId,
             },
             data
         });
@@ -102,7 +103,7 @@ export async function updateProject(id: string, data: { name?: string; descripti
             action: "UPDATE",
             resource: "Project",
             resourceId: id,
-            userId: session.user.id
+            userId
         });
 
         revalidatePath("/projects");
@@ -114,12 +115,12 @@ export async function updateProject(id: string, data: { name?: string; descripti
 }
 
 export async function deleteProject(id: string) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     try {
         await prisma.project.delete({
             where: {
                 id,
-                userId: session.user.id,
+                userId,
             }
         });
 
@@ -127,7 +128,7 @@ export async function deleteProject(id: string) {
             action: "DELETE",
             resource: "Project",
             resourceId: id,
-            userId: session.user.id
+            userId
         });
 
         revalidatePath("/projects");

@@ -16,24 +16,24 @@ const ClientSchema = z.object({
     photo: z.string().optional(),
 });
 
-async function getSession() {
+async function getRequiredSession() {
     const session = await auth();
     if (!session?.user?.id) {
         throw new Error("Unauthorized");
     }
-    return session;
+    return { userId: session.user.id, session };
 }
 
 export async function getClients() {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     return await prisma.client.findMany({
-        where: { userId: session.user.id },
+        where: { userId },
         orderBy: { createdAt: "desc" },
     });
 }
 
 export async function createClient(formData: FormData) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     const rawData = {
         name: formData.get("name"),
         email: formData.get("email"),
@@ -56,14 +56,14 @@ export async function createClient(formData: FormData) {
         await prisma.client.create({
             data: {
                 ...validatedData.data,
-                userId: session.user.id,
+                userId,
             },
         });
         await logAuditEvent({
             action: "CREATE",
             resource: "Client",
             metadata: { name: validatedData.data.name },
-            userId: session.user.id
+            userId
         });
     } catch (e) {
         console.error(e);
@@ -75,11 +75,11 @@ export async function createClient(formData: FormData) {
 }
 
 export async function getClient(id: string) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     return await prisma.client.findUnique({
         where: {
             id,
-            userId: session.user.id,
+            userId,
         },
         include: {
             invoices: { orderBy: { createdAt: "desc" } },
@@ -89,7 +89,7 @@ export async function getClient(id: string) {
 }
 
 export async function updateClient(id: string, formData: FormData) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     const rawData = {
         name: formData.get("name"),
         email: formData.get("email"),
@@ -112,7 +112,7 @@ export async function updateClient(id: string, formData: FormData) {
         await prisma.client.update({
             where: {
                 id,
-                userId: session.user.id,
+                userId,
             },
             data: validatedData.data,
         });
@@ -120,7 +120,7 @@ export async function updateClient(id: string, formData: FormData) {
             action: "UPDATE",
             resource: "Client",
             resourceId: id,
-            userId: session.user.id
+            userId
         });
     } catch (e) {
         console.error(e);
@@ -133,13 +133,13 @@ export async function updateClient(id: string, formData: FormData) {
 }
 
 export async function deleteClient(id: string) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     try {
         // Check for related invoices or quotes first
         const client = await prisma.client.findUnique({
             where: {
                 id,
-                userId: session.user.id,
+                userId,
             },
             include: {
                 _count: {
@@ -165,7 +165,7 @@ export async function deleteClient(id: string) {
         await prisma.client.delete({
             where: {
                 id,
-                userId: session.user.id,
+                userId,
             },
         });
         revalidatePath("/clients");
@@ -173,7 +173,7 @@ export async function deleteClient(id: string) {
             action: "DELETE",
             resource: "Client",
             resourceId: id,
-            userId: session.user.id
+            userId
         });
         return { success: true };
     } catch (e: any) {
@@ -183,9 +183,9 @@ export async function deleteClient(id: string) {
 }
 
 export async function getClientsByRevenue(limit = 5) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     const clients = await prisma.client.findMany({
-        where: { userId: session.user.id },
+        where: { userId },
         include: {
             invoices: {
                 select: {

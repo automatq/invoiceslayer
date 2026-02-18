@@ -1,6 +1,5 @@
 
 import { prisma } from "./lib/prisma";
-import { createInvoice } from "./app/actions/invoices";
 
 async function verifyEscrowFlow() {
     console.log("🚀 Starting Smart Escrow Verification...");
@@ -20,46 +19,45 @@ async function verifyEscrowFlow() {
             console.log("✅ Created test user");
         }
 
-        const client = await prisma.client.findFirst();
+        const userId = user.id;
+
+        const client = await prisma.client.findFirst({ where: { userId } });
+        let finalClient;
         if (!client) {
-            console.error("❌ No client found. Please create a client.");
-            // Create a dummy client if none exists for the test
-            const newClient = await prisma.client.create({
+            console.error("❌ No client found for user. Creating test client...");
+            finalClient = await prisma.client.create({
                 data: {
                     name: "Test Client",
                     email: "test@example.com",
                     address: "123 Test St",
-                    phone: "123-456-7890"
+                    phone: "123-456-7890",
+                    userId
                 }
             });
             console.log("✅ Created test client");
+        } else {
+            finalClient = client;
         }
 
-        const finalClient = await prisma.client.findFirst();
-        if (!finalClient) { throw new Error("Client creation failed"); }
-
-        const setting = await prisma.setting.findFirst();
+        const setting = await prisma.setting.findUnique({ where: { userId } });
         // Fallback to env var or a known test key if database setting is missing for dev
         const agentKey = setting?.agentApiKey || process.env.AGENT_API_KEY;
 
         if (!agentKey) {
             console.error("❌ No Agent API Key found in Settings or ENV.");
-            // Generate one temporarily for the test if needed? 
-            // Better to fail and ask user to set it up if it's missing.
             return;
         }
 
-        // 2. Create an Invoice with Escrow (Using Prisma directly to avoid revalidatePath issues in script)
+        // 2. Create an Invoice with Escrow
         console.log("📝 Creating Invoice with Escrow...");
 
-        // Generate a number
-        const count = await prisma.invoice.count();
         const number = `TEST-ESCROW-${Date.now()}`;
 
         const invoice = await prisma.invoice.create({
             data: {
                 number,
                 clientId: finalClient.id,
+                userId,
                 date: new Date(),
                 dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
                 status: "DRAFT",

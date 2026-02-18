@@ -4,12 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 
-async function getSession() {
+async function getRequiredSession() {
     const session = await auth();
     if (!session?.user?.id) {
         throw new Error("Unauthorized");
     }
-    return session;
+    return { userId: session.user.id, session };
 }
 
 export type InvoiceTemplateInput = {
@@ -21,8 +21,7 @@ export type InvoiceTemplateInput = {
 };
 
 export async function saveTemplateSettings(data: InvoiceTemplateInput) {
-    const session = await getSession();
-    const userId = session.user.id;
+    const { userId } = await getRequiredSession();
     try {
         const existing = await prisma.invoiceTemplate.findUnique({
             where: { userId }
@@ -92,4 +91,3 @@ export async function getActiveTemplate(userId?: string) {
         return null;
     }
 }
-

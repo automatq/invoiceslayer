@@ -109,13 +109,10 @@ export function InvoiceForm({
         return acc + lineAmount * ((item.taxRate || 0) / 100);
     }, 0);
     const total = subtotal + taxTotal;
-
     const onSubmit = async (data: InvoiceFormValues) => {
         try {
-            const formattedData = {
+            const invoiceData = {
                 ...data,
-                date: data.date.toISOString(),
-                dueDate: data.dueDate.toISOString(),
                 escrow: data.enableEscrow ? {
                     platform: data.escrowPlatform || "FIGMA",
                     resourceId: data.escrowResourceId || "",
@@ -125,9 +122,9 @@ export function InvoiceForm({
 
             let result;
             if (initialData) {
-                result = await updateInvoice(initialData.id, formattedData);
+                result = await updateInvoice(initialData.id, invoiceData);
             } else {
-                result = await createInvoice(formattedData);
+                result = await createInvoice(invoiceData);
             }
 
             if (result.success) {
@@ -146,6 +143,7 @@ export function InvoiceForm({
             toast.error("An unexpected error occurred");
         }
     };
+
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">

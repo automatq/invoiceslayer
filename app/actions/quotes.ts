@@ -6,12 +6,12 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
 
-async function getSession() {
+async function getRequiredSession() {
     const session = await auth();
     if (!session?.user?.id) {
         throw new Error("Unauthorized");
     }
-    return session;
+    return { userId: session.user.id, session };
 }
 
 const QuoteItemSchema = z.object({
@@ -30,9 +30,9 @@ const QuoteSchema = z.object({
 });
 
 export async function getQuotes() {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     return await prisma.quote.findMany({
-        where: { userId: session.user.id },
+        where: { userId },
         include: {
             client: true,
             items: true,
@@ -48,7 +48,7 @@ export async function createQuote(data: {
     expiryDate: Date;
     items: { description: string; quantity: number; unitPrice: number; taxRate?: number }[];
 }) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     const validatedData = QuoteSchema.safeParse(data);
 
     if (!validatedData.success) {
@@ -69,7 +69,7 @@ export async function createQuote(data: {
     const total = subtotal + taxTotal;
 
     const lastQuote = await prisma.quote.findFirst({
-        where: { userId: session.user.id },
+        where: { userId },
         orderBy: { createdAt: "desc" },
     });
 
@@ -89,7 +89,7 @@ export async function createQuote(data: {
             data: {
                 number: nextNumber,
                 clientId: validatedData.data.clientId,
-                userId: session.user.id,
+                userId,
                 projectId: validatedData.data.projectId,
                 date: validatedData.data.date,
                 expiryDate: validatedData.data.expiryDate,
@@ -113,7 +113,7 @@ export async function createQuote(data: {
             action: "CREATE",
             resource: "Quote",
             resourceId: quote.id,
-            userId: session.user.id,
+            userId,
             metadata: { number: quote.number }
         });
 
@@ -128,11 +128,11 @@ export async function createQuote(data: {
 }
 
 export async function getQuote(id: string) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     return await prisma.quote.findUnique({
         where: {
             id,
-            userId: session.user.id,
+            userId,
         },
         include: {
             client: true,
@@ -148,7 +148,7 @@ export async function updateQuote(id: string, data: {
     expiryDate: Date;
     items: { description: string; quantity: number; unitPrice: number; taxRate?: number }[];
 }) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     const validatedData = QuoteSchema.safeParse(data);
 
     if (!validatedData.success) {
@@ -171,12 +171,12 @@ export async function updateQuote(id: string, data: {
     try {
         await prisma.$transaction(async (tx: any) => {
             const existing = await tx.quote.findUnique({
-                where: { id, userId: session.user.id }
+                where: { id, userId }
             });
             if (!existing) throw new Error("Quote not found or unauthorized");
 
             await tx.quote.update({
-                where: { id, userId: session.user.id },
+                where: { id, userId },
                 data: {
                     clientId: validatedData.data.clientId,
                     projectId: validatedData.data.projectId,
@@ -209,7 +209,7 @@ export async function updateQuote(id: string, data: {
             action: "UPDATE",
             resource: "Quote",
             resourceId: id,
-            userId: session.user.id
+            userId
         });
 
         revalidatePath("/quotes");
@@ -224,12 +224,12 @@ export async function updateQuote(id: string, data: {
 }
 
 export async function deleteQuote(id: string) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     try {
         await prisma.quote.delete({
             where: {
                 id,
-                userId: session.user.id,
+                userId,
             },
         });
 
@@ -237,7 +237,7 @@ export async function deleteQuote(id: string) {
             action: "DELETE",
             resource: "Quote",
             resourceId: id,
-            userId: session.user.id
+            userId
         });
 
         revalidatePath("/quotes");

@@ -4,12 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 
-async function getSession() {
+async function getRequiredSession() {
     const session = await auth();
     if (!session?.user?.id) {
         throw new Error("Unauthorized");
     }
-    return session;
+    return { userId: session.user.id, session };
 }
 
 export type NotificationType = "INFO" | "WARNING" | "SUCCESS" | "ERROR";
@@ -51,10 +51,10 @@ export async function getUnreadCount() {
 }
 
 export async function markAsRead(id: string) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     try {
         await prisma.notification.update({
-            where: { id, userId: session.user.id },
+            where: { id, userId },
             data: { read: true },
         });
         revalidatePath("/");
@@ -65,10 +65,10 @@ export async function markAsRead(id: string) {
 }
 
 export async function markAllAsRead() {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     try {
         await prisma.notification.updateMany({
-            where: { userId: session.user.id, read: false },
+            where: { userId, read: false },
             data: { read: true },
         });
         revalidatePath("/");

@@ -9,12 +9,12 @@ import { createNotification } from "@/app/actions/notifications";
 import { auth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
 
-async function getSession() {
+async function getRequiredSession() {
     const session = await auth();
     if (!session?.user?.id) {
         throw new Error("Unauthorized");
     }
-    return session;
+    return { userId: session.user.id, session };
 }
 
 const RecurringInvoiceSchema = z.object({
@@ -29,9 +29,9 @@ const RecurringInvoiceSchema = z.object({
 });
 
 export async function getRecurringInvoices() {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     return await prisma.recurringInvoice.findMany({
-        where: { userId: session.user.id },
+        where: { userId },
         include: {
             client: true,
         },
@@ -40,9 +40,9 @@ export async function getRecurringInvoices() {
 }
 
 export async function getRecurringInvoice(id: string) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     return await prisma.recurringInvoice.findUnique({
-        where: { id, userId: session.user.id },
+        where: { id, userId },
         include: {
             client: true,
         },
@@ -57,12 +57,12 @@ export async function createRecurringInvoice(data: {
     maxOccurrences?: number | null;
     notes?: string;
 }) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     try {
         const recurring = await prisma.recurringInvoice.create({
             data: {
                 clientId: data.clientId,
-                userId: session.user.id,
+                userId,
                 items: JSON.stringify(data.items),
                 frequency: data.frequency,
                 nextRunDate: data.nextRunDate,
@@ -75,7 +75,7 @@ export async function createRecurringInvoice(data: {
             action: "CREATE",
             resource: "RecurringInvoice",
             resourceId: recurring.id,
-            userId: session.user.id
+            userId
         });
 
         revalidatePath("/recurring");
@@ -95,10 +95,10 @@ export async function updateRecurringInvoice(id: string, data: {
     isActive: boolean;
     notes?: string;
 }) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     try {
         await prisma.recurringInvoice.update({
-            where: { id, userId: session.user.id },
+            where: { id, userId },
             data: {
                 clientId: data.clientId,
                 items: JSON.stringify(data.items),
@@ -114,7 +114,7 @@ export async function updateRecurringInvoice(id: string, data: {
             action: "UPDATE",
             resource: "RecurringInvoice",
             resourceId: id,
-            userId: session.user.id
+            userId
         });
 
         revalidatePath("/recurring");
@@ -127,17 +127,17 @@ export async function updateRecurringInvoice(id: string, data: {
 }
 
 export async function deleteRecurringInvoice(id: string) {
-    const session = await getSession();
+    const { userId } = await getRequiredSession();
     try {
         await prisma.recurringInvoice.delete({
-            where: { id, userId: session.user.id },
+            where: { id, userId },
         });
 
         await logAuditEvent({
             action: "DELETE",
             resource: "RecurringInvoice",
             resourceId: id,
-            userId: session.user.id
+            userId
         });
 
         revalidatePath("/recurring");
@@ -160,7 +160,7 @@ export async function processRecurringInvoices() {
 
     for (const recurring of dueRecurring) {
         try {
-            const result = await prisma.$transaction(async (tx) => {
+            const result = await prisma.$transaction(async (tx: any) => {
                 const items = JSON.parse(recurring.items);
                 const subtotal = items.reduce((acc: number, item: any) => acc + (item.quantity * item.unitPrice), 0);
                 const taxTotal = items.reduce((acc: number, item: any) => acc + (item.quantity * item.unitPrice * (item.taxRate / 100)), 0);

@@ -3,9 +3,19 @@
 import { prisma } from "@/lib/prisma";
 import Papa from "papaparse";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/lib/auth";
+
+async function getRequiredSession() {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+    return { userId: session.user.id, session };
+}
 
 export async function importExpenses(formData: FormData) {
     try {
+        const { userId } = await getRequiredSession();
         const file = formData.get("file") as File;
         if (!file) {
             return { success: false, message: "No file provided" };
@@ -54,8 +64,6 @@ export async function importExpenses(formData: FormData) {
                 // For expenses, we usually expect positive numbers in the DB, 
                 // but bank CSVs often show debits as negative. 
                 // Let's ensure we store it as a positive expense amount.
-                // If the user uploads a credit (refund), effective logic might need to be smarter, 
-                // but for "Expenses", absolute value is a safe bet for v0.
                 const finalAmount = Math.abs(amount);
 
                 if (isNaN(finalAmount) || finalAmount === 0) {
@@ -70,6 +78,7 @@ export async function importExpenses(formData: FormData) {
                         description: description,
                         amount: finalAmount,
                         category: "Uncategorized", // Default category
+                        userId,
                     },
                 });
 
