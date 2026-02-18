@@ -3,35 +3,33 @@
 import { prisma as db } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { randomBytes } from "crypto";
+import { auth } from "@/lib/auth";
+
+async function getSession() {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+    return session;
+}
 
 export async function generateApiKey() {
+    const session = await getSession();
     try {
         const apiKey = "ag_" + randomBytes(24).toString("hex");
 
-        // Update the first settings record (assuming single tenant/user for now)
-        // or create if it doesn't exist
-        const firstSetting = await db.setting.findFirst();
+        await db.setting.upsert({
+            where: { userId: session.user.id },
+            update: { agentApiKey: apiKey },
+            create: {
+                userId: session.user.id,
+                companyName: session.user.name || "My Company",
+                companyEmail: session.user.email || "",
+                agentApiKey: apiKey,
+            }
+        });
 
-        if (firstSetting) {
-            await db.setting.update({
-                where: { id: firstSetting.id },
-                data: { agentApiKey: apiKey } as any,
-            });
-        } else {
-            await db.setting.create({
-                data: {
-                    companyName: "My Company",
-                    companyEmail: "admin@example.com",
-                    agentApiKey: apiKey,
-                } as any,
-            });
-        }
-
-        try {
-            revalidatePath("/settings");
-        } catch (e) {
-            // Ignore revalidate error in non-request context
-        }
+        revalidatePath("/settings");
         return { success: true, apiKey };
     } catch (error) {
         console.error("Failed to generate API key:", error);
@@ -40,15 +38,12 @@ export async function generateApiKey() {
 }
 
 export async function revokeApiKey() {
+    const session = await getSession();
     try {
-        const firstSetting = await db.setting.findFirst();
-
-        if (firstSetting) {
-            await db.setting.update({
-                where: { id: firstSetting.id },
-                data: { agentApiKey: null } as any,
-            });
-        }
+        await db.setting.update({
+            where: { userId: session.user.id },
+            data: { agentApiKey: null },
+        });
 
         revalidatePath("/settings");
         return { success: true };
@@ -60,8 +55,14 @@ export async function revokeApiKey() {
 
 export async function getApiKey() {
     try {
-        const setting = await db.setting.findFirst();
-        return (setting as any)?.agentApiKey || null;
+        const session = await auth();
+        if (!session?.user?.id) return null;
+
+        const setting = await db.setting.findUnique({
+            where: { userId: session.user.id },
+            select: { agentApiKey: true }
+        });
+        return setting?.agentApiKey || null;
     } catch (error) {
         console.error("Failed to get API key:", error);
         return null;

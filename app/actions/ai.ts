@@ -1,13 +1,21 @@
-
 "use server";
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/lib/auth";
 
 interface AiResponse {
     success: boolean;
     message?: string;
     data?: any;
+}
+
+async function getSession() {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+    return session;
 }
 
 /**
@@ -16,11 +24,6 @@ interface AiResponse {
 export async function testLocalAiConnection(url: string, model: string): Promise<AiResponse> {
     try {
         console.log(`[AI] Testing connection to ${url} with model ${model}`);
-
-        // Clean URL: remove trailing slash and /v1 if present to test base, 
-        // but for chat completions we usually need /v1/chat/completions
-        // Let's assume the user provides the base URL like "http://localhost:11434/v1"
-
         const endpoint = `${url.replace(/\/$/, "")}/chat/completions`;
 
         const payload = {
@@ -31,9 +34,7 @@ export async function testLocalAiConnection(url: string, model: string): Promise
 
         const response = await fetch(endpoint, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
         });
 
@@ -59,11 +60,13 @@ export async function testLocalAiConnection(url: string, model: string): Promise
 }
 
 /**
- * Saves the Local AI settings to the database.
+ * Saves the Local AI settings for the user.
  */
 export async function saveLocalAiSettings(url: string, model: string) {
+    const session = await getSession();
     try {
-        await prisma.setting.updateMany({
+        await prisma.setting.update({
+            where: { userId: session.user.id },
             data: {
                 localAiUrl: url,
                 localAiModel: model
@@ -77,10 +80,17 @@ export async function saveLocalAiSettings(url: string, model: string) {
 }
 
 /**
- * Generic function to generate text using the configured Local AI.
+ * Generic function to generate text using the user's configured Local AI.
  */
 export async function generateText(prompt: string): Promise<string | null> {
-    const settings = await prisma.setting.findFirst();
+    const session = await auth();
+    if (!session?.user?.id) return null;
+
+    const settings = await prisma.setting.findUnique({
+        where: { userId: session.user.id },
+        select: { localAiUrl: true, localAiModel: true }
+    });
+
     if (!settings?.localAiUrl || !settings?.localAiModel) {
         console.warn("[AI] Local AI not configured.");
         return null;

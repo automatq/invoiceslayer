@@ -29,6 +29,7 @@ interface AuditEventOptions {
     actor?: string;
     ipAddress?: string;
     metadata?: Record<string, unknown>;
+    userId: string;
 }
 
 /**
@@ -45,6 +46,7 @@ export async function logAuditEvent(opts: AuditEventOptions): Promise<void> {
                 actor: opts.actor ?? "system",
                 ipAddress: opts.ipAddress,
                 metadata: opts.metadata ? JSON.stringify(opts.metadata) : null,
+                userId: opts.userId,
             },
         });
     } catch (err) {
@@ -52,3 +54,4 @@ export async function logAuditEvent(opts: AuditEventOptions): Promise<void> {
         console.error("[AuditLog] Failed to write audit event:", err);
     }
 }
+

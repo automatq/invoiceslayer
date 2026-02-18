@@ -11,13 +11,12 @@ async function authenticate(req: NextRequest) {
     }
     const token = authHeader.split(" ")[1];
 
-    // In a real multi-tenant app, this would verify looking up by key
-    // Here we check if it matches the stored single-tenant key
-    const setting = await db.setting.findFirst();
-    if (setting && setting.agentApiKey === token) {
-        return true;
-    }
-    return null;
+    const setting = await db.setting.findUnique({
+        where: { agentApiKey: token },
+        select: { userId: true }
+    });
+
+    return setting?.userId || null;
 }
 
 export async function GET(req: NextRequest) {
@@ -26,16 +25,17 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });
     }
 
-    if (!await authenticate(req)) {
+    const userId = await authenticate(req);
+    if (!userId) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
-    const resource = searchParams.get("resource"); // e.g., ?resource=clients
+    const resource = searchParams.get("resource");
 
     try {
         if (resource === "user") {
-            const setting = await db.setting.findFirst();
+            const setting = await db.setting.findUnique({ where: { userId } });
             return NextResponse.json({
                 companyName: setting?.companyName,
                 email: setting?.companyEmail,
@@ -45,6 +45,7 @@ export async function GET(req: NextRequest) {
 
         if (resource === "clients") {
             const clients = await db.client.findMany({
+                where: { userId },
                 orderBy: { createdAt: "desc" },
                 select: { id: true, name: true, email: true, phone: true }
             });
@@ -53,6 +54,7 @@ export async function GET(req: NextRequest) {
 
         if (resource === "invoices") {
             const invoices = await db.invoice.findMany({
+                where: { userId },
                 orderBy: { createdAt: "desc" },
                 take: 50,
                 include: { client: { select: { name: true } } }
@@ -62,6 +64,7 @@ export async function GET(req: NextRequest) {
 
         if (resource === "projects") {
             const projects = await db.project.findMany({
+                where: { userId },
                 orderBy: { createdAt: "desc" },
                 include: { client: { select: { name: true } } }
             });
@@ -86,7 +89,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });
     }
 
-    if (!await authenticate(req)) {
+    const userId = await authenticate(req);
+    if (!userId) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -103,30 +107,30 @@ export async function POST(req: NextRequest) {
                     email: body.email,
                     address: body.address,
                     phone: body.phone,
+                    userId,
                 }
             });
+            await logAuditEvent({ action: "CREATE", resource: "Client", resourceId: client.id, actor: "api-key", userId });
             return NextResponse.json(client);
         }
 
         if (resource === "invoices") {
-            // Basic invoices creation (simplified for agent)
-            // Requires clientId, date, dueDate, items
-
-            // Generate a number if not provided
+            // Generate a number (per user)
             let number = body.number;
             if (!number) {
-                const count = await db.invoice.count();
+                const count = await db.invoice.count({ where: { userId } });
                 number = `INV-${new Date().getFullYear()}-${(count + 1).toString().padStart(4, "0")}`;
             }
 
             const invoice = await db.invoice.create({
                 data: {
                     number,
+                    userId,
                     date: new Date(body.date || Date.now()),
                     dueDate: new Date(body.dueDate || Date.now() + 7 * 24 * 60 * 60 * 1000),
                     clientId: body.clientId,
-                    status: "DRAFT",
-                    total: body.total || 0, // Should be calculated but trusting agent for now or 0
+                    status: body.status || "DRAFT",
+                    total: body.total || 0,
                     items: {
                         create: body.items?.map((item: any) => ({
                             description: item.description,
@@ -137,7 +141,7 @@ export async function POST(req: NextRequest) {
                     }
                 }
             });
-            await logAuditEvent({ action: "CREATE", resource: "Invoice", resourceId: invoice.id, actor: "api-key" });
+            await logAuditEvent({ action: "CREATE", resource: "Invoice", resourceId: invoice.id, actor: "api-key", userId });
             return NextResponse.json(invoice);
         }
 
@@ -150,7 +154,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-    if (!await authenticate(req)) {
+    const userId = await authenticate(req);
+    if (!userId) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -168,10 +173,11 @@ export async function PATCH(req: NextRequest) {
             }
 
             const updatedInvoice = await db.invoice.update({
-                where: { id },
+                where: { id, userId },
                 data: { status }
             });
 
+            await logAuditEvent({ action: "UPDATE", resource: "Invoice", resourceId: id, actor: "api-key", userId, metadata: { status } });
             return NextResponse.json(updatedInvoice);
         }
 
@@ -182,11 +188,16 @@ export async function PATCH(req: NextRequest) {
                 return NextResponse.json({ error: "Missing invoiceId or status" }, { status: 400 });
             }
 
+            // Check if user owns the invoice via a subquery or check beforehand
+            const invoice = await db.invoice.findUnique({ where: { id: invoiceId, userId } });
+            if (!invoice) return NextResponse.json({ error: "Invoice not found or unauthorized" }, { status: 404 });
+
             const updatedEscrow = await db.escrowContract.update({
                 where: { invoiceId },
                 data: { status }
             });
 
+            await logAuditEvent({ action: "UPDATE", resource: "Invoice", resourceId: invoiceId, actor: "api-key", userId, metadata: { escrowStatus: status } });
             return NextResponse.json(updatedEscrow);
         }
 

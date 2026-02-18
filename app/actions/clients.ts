@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { logAuditEvent } from "@/lib/audit";
+import { auth } from "@/lib/auth";
 
 const ClientSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -15,13 +16,24 @@ const ClientSchema = z.object({
     photo: z.string().optional(),
 });
 
+async function getSession() {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+    return session;
+}
+
 export async function getClients() {
+    const session = await getSession();
     return await prisma.client.findMany({
+        where: { userId: session.user.id },
         orderBy: { createdAt: "desc" },
     });
 }
 
 export async function createClient(formData: FormData) {
+    const session = await getSession();
     const rawData = {
         name: formData.get("name"),
         email: formData.get("email"),
@@ -42,10 +54,19 @@ export async function createClient(formData: FormData) {
 
     try {
         await prisma.client.create({
-            data: validatedData.data,
+            data: {
+                ...validatedData.data,
+                userId: session.user.id,
+            },
         });
-        await logAuditEvent({ action: "CREATE", resource: "Client", metadata: { name: validatedData.data.name } });
+        await logAuditEvent({
+            action: "CREATE",
+            resource: "Client",
+            metadata: { name: validatedData.data.name },
+            userId: session.user.id
+        });
     } catch (e) {
+        console.error(e);
         return { message: "Database Error: Failed to create client" };
     }
 
@@ -54,17 +75,21 @@ export async function createClient(formData: FormData) {
 }
 
 export async function getClient(id: string) {
+    const session = await getSession();
     return await prisma.client.findUnique({
-        where: { id },
+        where: {
+            id,
+            userId: session.user.id,
+        },
         include: {
             invoices: { orderBy: { createdAt: "desc" } },
             quotes: { orderBy: { createdAt: "desc" } },
         },
     });
 }
-// ... (existing functions)
 
 export async function updateClient(id: string, formData: FormData) {
+    const session = await getSession();
     const rawData = {
         name: formData.get("name"),
         email: formData.get("email"),
@@ -85,25 +110,37 @@ export async function updateClient(id: string, formData: FormData) {
 
     try {
         await prisma.client.update({
-            where: { id },
+            where: {
+                id,
+                userId: session.user.id,
+            },
             data: validatedData.data,
         });
-        await logAuditEvent({ action: "UPDATE", resource: "Client", resourceId: id });
+        await logAuditEvent({
+            action: "UPDATE",
+            resource: "Client",
+            resourceId: id,
+            userId: session.user.id
+        });
     } catch (e) {
+        console.error(e);
         return { message: "Database Error: Failed to update client" };
     }
 
     revalidatePath("/clients");
-    // ... existing code
     revalidatePath(`/clients/${id}`);
     redirect(`/clients/${id}`);
 }
 
 export async function deleteClient(id: string) {
+    const session = await getSession();
     try {
         // Check for related invoices or quotes first
         const client = await prisma.client.findUnique({
-            where: { id },
+            where: {
+                id,
+                userId: session.user.id,
+            },
             include: {
                 _count: {
                     select: {
@@ -126,10 +163,18 @@ export async function deleteClient(id: string) {
         }
 
         await prisma.client.delete({
-            where: { id },
+            where: {
+                id,
+                userId: session.user.id,
+            },
         });
         revalidatePath("/clients");
-        await logAuditEvent({ action: "DELETE", resource: "Client", resourceId: id });
+        await logAuditEvent({
+            action: "DELETE",
+            resource: "Client",
+            resourceId: id,
+            userId: session.user.id
+        });
         return { success: true };
     } catch (e: any) {
         console.error("Delete client error:", e);
@@ -138,7 +183,9 @@ export async function deleteClient(id: string) {
 }
 
 export async function getClientsByRevenue(limit = 5) {
+    const session = await getSession();
     const clients = await prisma.client.findMany({
+        where: { userId: session.user.id },
         include: {
             invoices: {
                 select: {

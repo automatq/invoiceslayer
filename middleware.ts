@@ -1,4 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import NextAuth from "next-auth";
+import authConfig from "./auth.config";
+import { NextResponse } from "next/server";
+
+const { auth } = NextAuth(authConfig);
 
 const SECURITY_HEADERS = {
     "X-Frame-Options": "DENY",
@@ -8,7 +12,7 @@ const SECURITY_HEADERS = {
     "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
     "Content-Security-Policy": [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval needed for Next.js dev
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: blob: https:",
@@ -17,43 +21,49 @@ const SECURITY_HEADERS = {
     ].join("; "),
 };
 
-// Routes that require CRON_SECRET bearer token
 const CRON_ROUTES = ["/api/cron/recurring", "/api/cron/reminders"];
+const AUTH_ROUTES = ["/login", "/register", "/api/auth"];
+const PUBLIC_PORTAL_ROUTES = ["/p/", "/portal/"];
 
-export function middleware(request: NextRequest) {
-    const { pathname } = request.nextUrl;
+export default auth((req) => {
+    const { pathname } = req.nextUrl;
+    const isLoggedIn = !!req.auth;
 
-    // --- Protect cron endpoints ---
+    // 1. Cron protection
     if (CRON_ROUTES.some((route) => pathname.startsWith(route))) {
         const cronSecret = process.env.CRON_SECRET;
-        const authHeader = request.headers.get("authorization");
-
+        const authHeader = req.headers.get("authorization");
         if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
+        return NextResponse.next();
     }
 
-    // --- Apply security headers to all responses ---
-    const response = NextResponse.next();
+    // 2. Auth & Route protection
+    const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
+    const isPublicPortalRoute = PUBLIC_PORTAL_ROUTES.some((route) => pathname.startsWith(route));
 
+    if (isAuthRoute) {
+        if (isLoggedIn) {
+            return NextResponse.redirect(new URL("/", req.url));
+        }
+        return NextResponse.next();
+    }
+
+    if (!isLoggedIn && !isPublicPortalRoute) {
+        return NextResponse.redirect(new URL("/login", req.url));
+    }
+
+    // 3. Security Headers
+    const response = NextResponse.next();
     Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
         response.headers.set(key, value);
     });
 
     return response;
-}
+});
 
 export const config = {
-    matcher: [
-        /*
-         * Match all request paths except:
-         * - _next/static (static files)
-         * - _next/image (image optimization)
-         * - favicon.ico
-         */
-        "/((?!_next/static|_next/image|favicon.ico).*)",
-    ],
+    matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)", "/api/cron/:path*"],
 };
+

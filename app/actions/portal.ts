@@ -3,6 +3,15 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
+import { auth } from "@/lib/auth";
+
+async function getSession() {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+    return session;
+}
 
 export async function getClientByPortalToken(token: string) {
     if (!token) return null;
@@ -40,10 +49,14 @@ export async function getClientByPortalToken(token: string) {
 }
 
 export async function regeneratePortalToken(clientId: string) {
+    const session = await getSession();
     try {
         const token = uuidv4();
         await prisma.client.update({
-            where: { id: clientId },
+            where: {
+                id: clientId,
+                userId: session.user.id,
+            },
             data: { portalToken: token },
         });
 
@@ -56,8 +69,12 @@ export async function regeneratePortalToken(clientId: string) {
 }
 
 export async function ensureClientHasToken(clientId: string) {
+    const session = await getSession();
     const client = await prisma.client.findUnique({
-        where: { id: clientId },
+        where: {
+            id: clientId,
+            userId: session.user.id,
+        },
         select: { portalToken: true }
     });
 

@@ -2,8 +2,17 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
+import { auth } from "@/lib/auth";
+import { logAuditEvent } from "@/lib/audit";
+
+async function getSession() {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+    return session;
+}
 
 const QuoteItemSchema = z.object({
     description: z.string().min(1, "Description is required"),
@@ -21,7 +30,9 @@ const QuoteSchema = z.object({
 });
 
 export async function getQuotes() {
+    const session = await getSession();
     return await prisma.quote.findMany({
+        where: { userId: session.user.id },
         include: {
             client: true,
             items: true,
@@ -33,10 +44,11 @@ export async function getQuotes() {
 export async function createQuote(data: {
     clientId: string;
     projectId?: string;
-    date: string;
-    expiryDate: string;
+    date: Date;
+    expiryDate: Date;
     items: { description: string; quantity: number; unitPrice: number; taxRate?: number }[];
 }) {
+    const session = await getSession();
     const validatedData = QuoteSchema.safeParse(data);
 
     if (!validatedData.success) {
@@ -46,7 +58,6 @@ export async function createQuote(data: {
         };
     }
 
-    // Calculate totals
     const items = validatedData.data.items.map(item => {
         const amount = item.quantity * item.unitPrice;
         const taxAmount = amount * (item.taxRate / 100);
@@ -57,15 +68,20 @@ export async function createQuote(data: {
     const taxTotal = items.reduce((acc, item) => acc + item.taxAmount, 0);
     const total = subtotal + taxTotal;
 
-    // Generate Quote Number
     const lastQuote = await prisma.quote.findFirst({
+        where: { userId: session.user.id },
         orderBy: { createdAt: "desc" },
     });
 
     let nextNumber = "QUO-001";
     if (lastQuote && lastQuote.number.startsWith("QUO-")) {
-        const lastNum = parseInt(lastQuote.number.split("-")[1], 10);
-        nextNumber = `QUO-${String(lastNum + 1).padStart(3, "0")}`;
+        const lastNumSplit = lastQuote.number.split("-")[1];
+        if (lastNumSplit) {
+            const lastNumNum = parseInt(lastNumSplit, 10);
+            if (!isNaN(lastNumNum)) {
+                nextNumber = `QUO-${String(lastNumNum + 1).padStart(3, "0")}`;
+            }
+        }
     }
 
     try {
@@ -73,6 +89,7 @@ export async function createQuote(data: {
             data: {
                 number: nextNumber,
                 clientId: validatedData.data.clientId,
+                userId: session.user.id,
                 projectId: validatedData.data.projectId,
                 date: validatedData.data.date,
                 expiryDate: validatedData.data.expiryDate,
@@ -92,6 +109,14 @@ export async function createQuote(data: {
             },
         });
 
+        await logAuditEvent({
+            action: "CREATE",
+            resource: "Quote",
+            resourceId: quote.id,
+            userId: session.user.id,
+            metadata: { number: quote.number }
+        });
+
         revalidatePath("/quotes");
         revalidatePath("/reports");
         revalidatePath("/");
@@ -103,8 +128,12 @@ export async function createQuote(data: {
 }
 
 export async function getQuote(id: string) {
+    const session = await getSession();
     return await prisma.quote.findUnique({
-        where: { id },
+        where: {
+            id,
+            userId: session.user.id,
+        },
         include: {
             client: true,
             items: true,
@@ -115,10 +144,11 @@ export async function getQuote(id: string) {
 export async function updateQuote(id: string, data: {
     clientId: string;
     projectId?: string;
-    date: string;
-    expiryDate: string;
+    date: Date;
+    expiryDate: Date;
     items: { description: string; quantity: number; unitPrice: number; taxRate?: number }[];
 }) {
+    const session = await getSession();
     const validatedData = QuoteSchema.safeParse(data);
 
     if (!validatedData.success) {
@@ -128,7 +158,6 @@ export async function updateQuote(id: string, data: {
         };
     }
 
-    // Calculate totals
     const items = validatedData.data.items.map(item => {
         const amount = item.quantity * item.unitPrice;
         const taxAmount = amount * (item.taxRate / 100);
@@ -141,8 +170,13 @@ export async function updateQuote(id: string, data: {
 
     try {
         await prisma.$transaction(async (tx: any) => {
+            const existing = await tx.quote.findUnique({
+                where: { id, userId: session.user.id }
+            });
+            if (!existing) throw new Error("Quote not found or unauthorized");
+
             await tx.quote.update({
-                where: { id },
+                where: { id, userId: session.user.id },
                 data: {
                     clientId: validatedData.data.clientId,
                     projectId: validatedData.data.projectId,
@@ -171,6 +205,13 @@ export async function updateQuote(id: string, data: {
             });
         });
 
+        await logAuditEvent({
+            action: "UPDATE",
+            resource: "Quote",
+            resourceId: id,
+            userId: session.user.id
+        });
+
         revalidatePath("/quotes");
         revalidatePath(`/quotes/${id}`);
         revalidatePath("/reports");
@@ -183,10 +224,22 @@ export async function updateQuote(id: string, data: {
 }
 
 export async function deleteQuote(id: string) {
+    const session = await getSession();
     try {
         await prisma.quote.delete({
-            where: { id },
+            where: {
+                id,
+                userId: session.user.id,
+            },
         });
+
+        await logAuditEvent({
+            action: "DELETE",
+            resource: "Quote",
+            resourceId: id,
+            userId: session.user.id
+        });
+
         revalidatePath("/quotes");
         return { success: true };
     } catch (e) {

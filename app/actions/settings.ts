@@ -4,6 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { unstable_noStore as noStore } from "next/cache";
 import { logAuditEvent } from "@/lib/audit";
+import { auth } from "@/lib/auth";
+
+async function getSession() {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+    return session;
+}
 
 export type SettingsFormValues = {
     companyName: string;
@@ -27,15 +36,32 @@ export type SettingsFormValues = {
 };
 
 export async function createSettings(data: SettingsFormValues) {
+    const session = await getSession();
     try {
-        const existing = await prisma.setting.findFirst();
+        const existing = await prisma.setting.findUnique({
+            where: { userId: session.user.id }
+        });
+
         if (existing) {
-            await prisma.setting.update({ where: { id: existing.id }, data });
+            await prisma.setting.update({
+                where: { userId: session.user.id },
+                data
+            });
         } else {
-            await prisma.setting.create({ data });
+            await prisma.setting.create({
+                data: {
+                    ...data,
+                    userId: session.user.id
+                }
+            });
         }
         revalidatePath("/");
-        await logAuditEvent({ action: "SETTINGS_CHANGE", resource: "Settings" });
+        revalidatePath("/settings");
+        await logAuditEvent({
+            action: "SETTINGS_CHANGE",
+            resource: "Settings",
+            userId: session.user.id
+        });
         return { success: true };
     } catch (e) {
         console.error(e);
@@ -43,16 +69,21 @@ export async function createSettings(data: SettingsFormValues) {
     }
 }
 
-export async function getSettings() {
+export async function getSettings(userId?: string) {
     noStore();
     try {
-        const settings = await prisma.setting.findFirst();
-        if (settings) {
-            console.log(`[getSettings] Found settings. Logo length: ${settings.companyLogo?.length || 0}`);
-        } else {
-            console.log("[getSettings] No settings found in DB");
+        let finalUserId = userId;
+
+        if (!finalUserId) {
+            const session = await auth();
+            if (!session?.user?.id) return null;
+            finalUserId = session.user.id;
         }
-        // Return the full settings object, including localAi configuration
+
+        const settings = await prisma.setting.findUnique({
+            where: { userId: finalUserId }
+        });
+
         return settings;
     } catch (e) {
         console.error("Error getting settings:", e);
@@ -60,13 +91,22 @@ export async function getSettings() {
     }
 }
 
-export async function getCompanyLogo() {
+
+export async function getCompanyLogo(userId?: string) {
     noStore();
     try {
-        const settings = await prisma.setting.findFirst({
+        let finalUserId = userId;
+
+        if (!finalUserId) {
+            const session = await auth();
+            if (!session?.user?.id) return null;
+            finalUserId = session.user.id;
+        }
+
+        const settings = await prisma.setting.findUnique({
+            where: { userId: finalUserId },
             select: { companyLogo: true }
         });
-        console.log(`[getCompanyLogo] Length: ${settings?.companyLogo?.length || 0}`);
         return settings?.companyLogo;
     } catch (e) {
         console.error("Error getting logo:", e);
@@ -74,18 +114,22 @@ export async function getCompanyLogo() {
     }
 }
 
+
 export async function purgeAllData() {
+    const session = await getSession();
     try {
+        const userId = session.user.id;
         await prisma.$transaction([
-            prisma.payment.deleteMany(),
-            prisma.invoiceItem.deleteMany(),
-            prisma.invoice.deleteMany(),
-            prisma.quoteItem.deleteMany(),
-            prisma.quote.deleteMany(),
-            prisma.recurringInvoice.deleteMany(),
-            prisma.client.deleteMany(),
-            prisma.notification.deleteMany(),
-            prisma.expense.deleteMany(),
+            prisma.payment.deleteMany({ where: { invoice: { userId } } }),
+            prisma.invoiceItem.deleteMany({ where: { invoice: { userId } } }),
+            prisma.invoice.deleteMany({ where: { userId } }),
+            prisma.quoteItem.deleteMany({ where: { quote: { userId } } }),
+            prisma.quote.deleteMany({ where: { userId } }),
+            prisma.recurringInvoice.deleteMany({ where: { userId } }),
+            prisma.client.deleteMany({ where: { userId } }),
+            prisma.notification.deleteMany({ where: { userId } }),
+            prisma.expense.deleteMany({ where: { userId } }),
+            prisma.project.deleteMany({ where: { userId } }),
         ]);
 
         revalidatePath("/");
@@ -95,7 +139,12 @@ export async function purgeAllData() {
         revalidatePath("/expenses");
         revalidatePath("/recurring");
 
-        await logAuditEvent({ action: "DATA_PURGE", resource: "System", metadata: { purgedAt: new Date().toISOString() } });
+        await logAuditEvent({
+            action: "DATA_PURGE",
+            resource: "System",
+            userId: session.user.id,
+            metadata: { purgedAt: new Date().toISOString() }
+        });
         return { success: true };
     } catch (e) {
         console.error("Purge failed:", e);

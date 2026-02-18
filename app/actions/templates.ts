@@ -2,6 +2,15 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/lib/auth";
+
+async function getSession() {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+    return session;
+}
 
 export type InvoiceTemplateInput = {
     name: string;
@@ -12,27 +21,23 @@ export type InvoiceTemplateInput = {
 };
 
 export async function saveTemplateSettings(data: InvoiceTemplateInput) {
+    const session = await getSession();
+    const userId = session.user.id;
     try {
-        // For now, we'll treat this as a singleton "active" template update
-        // In the future, we can change this to create new records
-
-        // Check if an active template exists
-        const existing = await prisma.invoiceTemplate.findFirst({
-            where: { isActive: true }
+        const existing = await prisma.invoiceTemplate.findUnique({
+            where: { userId }
         });
 
         if (existing) {
             await prisma.invoiceTemplate.update({
-                where: { id: existing.id },
-                data: {
-                    ...data,
-                    // If name changes, we update it, otherwise keep existing or default
-                }
+                where: { userId },
+                data
             });
         } else {
             await prisma.invoiceTemplate.create({
                 data: {
                     ...data,
+                    userId,
                     isActive: true
                 }
             });
@@ -47,13 +52,29 @@ export async function saveTemplateSettings(data: InvoiceTemplateInput) {
     }
 }
 
-export async function getActiveTemplate() {
+export async function getActiveTemplate(userId?: string) {
     try {
-        const template = await prisma.invoiceTemplate.findFirst({
-            where: { isActive: true }
+        let finalUserId = userId;
+
+        if (!finalUserId) {
+            const session = await auth();
+            if (!session?.user?.id) {
+                return {
+                    name: "Default",
+                    color: "#0f172a",
+                    font: "inter",
+                    layout: "modern",
+                    logoUrl: null,
+                    isActive: true
+                };
+            }
+            finalUserId = session.user.id;
+        }
+
+        const template = await prisma.invoiceTemplate.findUnique({
+            where: { userId: finalUserId }
         });
 
-        // Return default if no template found
         if (!template) {
             return {
                 name: "Default",
@@ -71,3 +92,4 @@ export async function getActiveTemplate() {
         return null;
     }
 }
+

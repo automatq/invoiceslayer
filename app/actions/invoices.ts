@@ -5,9 +5,20 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createNotification } from "@/app/actions/notifications";
 import { logAuditEvent } from "@/lib/audit";
+import { auth } from "@/lib/auth";
+
+async function getSession() {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+    return session;
+}
 
 export async function getInvoices() {
+    const session = await getSession();
     return await prisma.invoice.findMany({
+        where: { userId: session.user.id },
         include: {
             client: true,
             items: true,
@@ -18,8 +29,12 @@ export async function getInvoices() {
 }
 
 export async function getInvoice(id: string) {
+    const session = await getSession();
     return await prisma.invoice.findUnique({
-        where: { id },
+        where: {
+            id,
+            userId: session.user.id,
+        },
         include: {
             client: true,
             items: true,
@@ -29,8 +44,12 @@ export async function getInvoice(id: string) {
 }
 
 export async function convertQuoteToInvoice(quoteId: string) {
+    const session = await getSession();
     const quote = await prisma.quote.findUnique({
-        where: { id: quoteId },
+        where: {
+            id: quoteId,
+            userId: session.user.id,
+        },
         include: { items: true },
     });
 
@@ -38,15 +57,18 @@ export async function convertQuoteToInvoice(quoteId: string) {
         return { success: false, message: "Quote not found" };
     }
 
-    // Generate Invoice Number
+    // Generate Invoice Number (per user)
     const lastInvoice = await prisma.invoice.findFirst({
+        where: { userId: session.user.id },
         orderBy: { createdAt: "desc" },
     });
 
     let nextNumber = "INV-001";
     if (lastInvoice && lastInvoice.number.startsWith("INV-")) {
-        const lastNum = parseInt(lastInvoice.number.split("-")[1], 10);
-        nextNumber = `INV-${String(lastNum + 1).padStart(3, "0")}`;
+        const lastNumNum = parseInt(lastInvoice.number.split("-")[1], 10);
+        if (!isNaN(lastNumNum)) {
+            nextNumber = `INV-${String(lastNumNum + 1).padStart(3, "0")}`;
+        }
     }
 
     try {
@@ -56,8 +78,9 @@ export async function convertQuoteToInvoice(quoteId: string) {
                 data: {
                     number: nextNumber,
                     clientId: quote.clientId,
+                    userId: session.user.id,
                     date: new Date(),
-                    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days
+                    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
                     status: "DRAFT",
                     total: quote.total,
                     subtotal: quote.subtotal,
@@ -77,14 +100,21 @@ export async function convertQuoteToInvoice(quoteId: string) {
 
             // Update Quote status
             await tx.quote.update({
-                where: { id: quoteId },
+                where: { id: quoteId, userId: session.user.id },
                 data: { status: "ACCEPTED" },
             });
 
             return { id: invoice.id, number: invoice.number };
         });
 
-        // Trigger Notification
+        await logAuditEvent({
+            action: "CREATE",
+            resource: "Invoice",
+            resourceId: result.id,
+            userId: session.user.id,
+            metadata: { convertedFrom: quoteId }
+        });
+
         await createNotification({
             type: "SUCCESS",
             title: "Quote Accepted",
@@ -104,6 +134,7 @@ export async function convertQuoteToInvoice(quoteId: string) {
 const VALID_STATUSES = ["DRAFT", "SENT", "PAID", "OVERDUE", "CANCELLED", "PARTIAL"] as const;
 
 export async function updateInvoiceStatus(id: string, status: string) {
+    const session = await getSession();
     if (!VALID_STATUSES.includes(status as any)) {
         return { success: false, message: "Invalid status" };
     }
@@ -111,13 +142,12 @@ export async function updateInvoiceStatus(id: string, status: string) {
     try {
         await prisma.$transaction(async (tx: any) => {
             const invoice = await tx.invoice.findUnique({
-                where: { id },
+                where: { id, userId: session.user.id },
                 select: { total: true, amountPaid: true, number: true }
             });
 
             if (!invoice) throw new Error("Invoice not found");
 
-            // If marking as PAID and not fully paid, create a payment for the balance
             if (status === "PAID" && invoice.amountPaid < invoice.total) {
                 const balance = invoice.total - invoice.amountPaid;
                 await tx.payment.create({
@@ -130,21 +160,27 @@ export async function updateInvoiceStatus(id: string, status: string) {
                     }
                 });
 
-                // Update amountPaid to total
                 await tx.invoice.update({
-                    where: { id },
+                    where: { id, userId: session.user.id },
                     data: {
                         status,
                         amountPaid: invoice.total
                     },
                 });
             } else {
-                // Just update status
                 await tx.invoice.update({
-                    where: { id },
+                    where: { id, userId: session.user.id },
                     data: { status },
                 });
             }
+        });
+
+        await logAuditEvent({
+            action: "UPDATE",
+            resource: "Invoice",
+            resourceId: id,
+            userId: session.user.id,
+            metadata: { status }
         });
 
         revalidatePath(`/invoices/${id}`);
@@ -184,6 +220,7 @@ export async function createInvoice(data: {
     dueDate: string;
     items: { description: string; quantity: number; unitPrice: number; taxRate?: number }[];
 }) {
+    const session = await getSession();
     const validatedData = InvoiceSchema.safeParse(data);
 
     if (!validatedData.success) {
@@ -193,7 +230,6 @@ export async function createInvoice(data: {
         };
     }
 
-    // Calculate totals
     const items = validatedData.data.items.map(item => {
         const amount = item.quantity * item.unitPrice;
         const taxAmount = amount * (item.taxRate / 100);
@@ -204,15 +240,20 @@ export async function createInvoice(data: {
     const taxTotal = items.reduce((acc, item) => acc + item.taxAmount, 0);
     const total = subtotal + taxTotal;
 
-    // Generate Invoice Number
     const lastInvoice = await prisma.invoice.findFirst({
+        where: { userId: session.user.id },
         orderBy: { createdAt: "desc" },
     });
 
     let nextNumber = "INV-001";
     if (lastInvoice && lastInvoice.number.startsWith("INV-")) {
-        const lastNum = parseInt(lastInvoice.number.split("-")[1], 10);
-        nextNumber = `INV-${String(lastNum + 1).padStart(3, "0")}`;
+        const lastNumSplit = lastInvoice.number.split("-")[1];
+        if (lastNumSplit) {
+            const lastNumNum = parseInt(lastNumSplit, 10);
+            if (!isNaN(lastNumNum)) {
+                nextNumber = `INV-${String(lastNumNum + 1).padStart(3, "0")}`;
+            }
+        }
     }
 
     try {
@@ -220,6 +261,7 @@ export async function createInvoice(data: {
             data: {
                 number: nextNumber,
                 clientId: validatedData.data.clientId,
+                userId: session.user.id,
                 projectId: validatedData.data.projectId,
                 date: validatedData.data.date,
                 dueDate: validatedData.data.dueDate,
@@ -242,17 +284,24 @@ export async function createInvoice(data: {
                         platform: validatedData.data.escrow.platform,
                         resourceId: validatedData.data.escrow.resourceId,
                         condition: validatedData.data.escrow.condition,
-                        amount: total, // Escrow the full amount for now
+                        amount: total,
                         status: "PENDING"
                     }
                 } : undefined,
             },
         });
 
+        await logAuditEvent({
+            action: "CREATE",
+            resource: "Invoice",
+            resourceId: invoice.id,
+            userId: session.user.id,
+            metadata: { number: invoice.number }
+        });
+
         revalidatePath("/invoices");
         revalidatePath("/reports");
         revalidatePath("/");
-        await logAuditEvent({ action: "CREATE", resource: "Invoice", resourceId: invoice.id, metadata: { number: invoice.number } });
         return { success: true, invoiceId: invoice.id };
     } catch (e) {
         console.error(e);
@@ -261,12 +310,23 @@ export async function createInvoice(data: {
 }
 
 export async function deleteInvoice(id: string) {
+    const session = await getSession();
     try {
         await prisma.invoice.delete({
-            where: { id },
+            where: {
+                id,
+                userId: session.user.id,
+            },
         });
+
+        await logAuditEvent({
+            action: "DELETE",
+            resource: "Invoice",
+            resourceId: id,
+            userId: session.user.id
+        });
+
         revalidatePath("/invoices");
-        await logAuditEvent({ action: "DELETE", resource: "Invoice", resourceId: id });
         return { success: true };
     } catch (e) {
         return { message: "Database Error: Failed to delete invoice" };
@@ -280,6 +340,7 @@ export async function updateInvoice(id: string, data: {
     dueDate: string;
     items: { description: string; quantity: number; unitPrice: number; taxRate?: number }[];
 }) {
+    const session = await getSession();
     const validatedData = InvoiceSchema.safeParse(data);
 
     if (!validatedData.success) {
@@ -289,7 +350,6 @@ export async function updateInvoice(id: string, data: {
         };
     }
 
-    // Calculate totals
     const items = validatedData.data.items.map(item => {
         const amount = item.quantity * item.unitPrice;
         const taxAmount = amount * (item.taxRate / 100);
@@ -302,9 +362,13 @@ export async function updateInvoice(id: string, data: {
 
     try {
         await prisma.$transaction(async (tx: any) => {
-            // 1. Update Invoice basic details
+            const existing = await tx.invoice.findUnique({
+                where: { id, userId: session.user.id }
+            });
+            if (!existing) throw new Error("Invoice not found or unauthorized");
+
             await tx.invoice.update({
-                where: { id },
+                where: { id, userId: session.user.id },
                 data: {
                     clientId: validatedData.data.clientId,
                     projectId: validatedData.data.projectId,
@@ -316,12 +380,10 @@ export async function updateInvoice(id: string, data: {
                 },
             });
 
-            // 2. Delete existing items
             await tx.invoiceItem.deleteMany({
                 where: { invoiceId: id },
             });
 
-            // 3. Create new items
             await tx.invoiceItem.createMany({
                 data: items.map((item) => ({
                     invoiceId: id,
@@ -335,11 +397,17 @@ export async function updateInvoice(id: string, data: {
             });
         });
 
+        await logAuditEvent({
+            action: "UPDATE",
+            resource: "Invoice",
+            resourceId: id,
+            userId: session.user.id
+        });
+
         revalidatePath("/invoices");
         revalidatePath(`/invoices/${id}`);
         revalidatePath("/reports");
         revalidatePath("/");
-        await logAuditEvent({ action: "UPDATE", resource: "Invoice", resourceId: id });
         return { success: true };
     } catch (e) {
         console.error(e);

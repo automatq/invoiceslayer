@@ -2,6 +2,16 @@
 
 import { prisma as db } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/lib/auth";
+import { logAuditEvent } from "@/lib/audit";
+
+async function getSession() {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+    return session;
+}
 
 export type ExpenseFormValues = {
     description: string;
@@ -13,6 +23,7 @@ export type ExpenseFormValues = {
 };
 
 export async function createExpense(data: ExpenseFormValues) {
+    const session = await getSession();
     try {
         const expense = await db.expense.create({
             data: {
@@ -22,7 +33,15 @@ export async function createExpense(data: ExpenseFormValues) {
                 category: data.category,
                 receipt: data.receipt,
                 projectId: data.projectId,
+                userId: session.user.id,
             },
+        });
+
+        await logAuditEvent({
+            action: "CREATE",
+            resource: "Expense",
+            resourceId: expense.id,
+            userId: session.user.id
         });
 
         revalidatePath("/expenses");
@@ -36,8 +55,10 @@ export async function createExpense(data: ExpenseFormValues) {
 }
 
 export async function getExpenses() {
+    const session = await getSession();
     try {
         const expenses = await db.expense.findMany({
+            where: { userId: session.user.id },
             orderBy: {
                 date: "desc",
             },
@@ -53,9 +74,20 @@ export async function getExpenses() {
 }
 
 export async function deleteExpense(id: string) {
+    const session = await getSession();
     try {
         await db.expense.delete({
-            where: { id },
+            where: {
+                id,
+                userId: session.user.id,
+            },
+        });
+
+        await logAuditEvent({
+            action: "DELETE",
+            resource: "Expense",
+            resourceId: id,
+            userId: session.user.id
         });
 
         revalidatePath("/expenses");

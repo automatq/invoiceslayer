@@ -4,20 +4,18 @@ import { prisma } from "@/lib/prisma";
 import { sendInvoiceEmail } from "@/app/actions/email";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "@/app/actions/notifications";
+import { logAuditEvent } from "@/lib/audit";
 
 export async function checkAndSendReminders() {
     try {
         const now = new Date();
 
-        // 1. Find overdue invoices that are not yet marked as OVERDUE
-        // Or simply find any invoice that is past due date and not paid
+        // Find overdue invoices (not yet marked as OVERDUE)
         const overdueInvoices = await prisma.invoice.findMany({
             where: {
-                dueDate: { lt: now }, // Due date is in the past
+                dueDate: { lt: now },
                 status: {
-                    in: ["SENT", "PARTIAL", "DRAFT"], // Not PAID or already OVERDUE/CANCELLED?
-                    // Actually, if it's DRAFT, we shouldn't mark it overdue probably? Or maybe we should?
-                    // Let's assume only SENT or PARTIAL invoices can be overdue.
+                    in: ["SENT", "PARTIAL", "DRAFT"],
                 },
             },
             include: {
@@ -29,31 +27,18 @@ export async function checkAndSendReminders() {
         let emailedCount = 0;
 
         for (const invoice of overdueInvoices) {
+            const userId = invoice.userId;
+
             // Update status to OVERDUE
             await prisma.invoice.update({
-                where: { id: invoice.id },
+                where: { id: invoice.id, userId },
                 data: { status: "OVERDUE" },
             });
             updatedCount++;
 
-            // Send reminder email?
-            // We might want to throttle this (e.g. only once a week). 
-            // For MVP, let's just mark them as OVERDUE. 
-            // Sending email automatically might be aggressive without user config.
-            // But let's say we send one email when it becomes overdue.
-
-            // To do this properly, we'd need a "lastReminderSent" field.
-            // For now, I'll just skip auto-emailing to be safe, or just relying on the status change.
-            // The user requested "Late Payment Reminders", so maybe I *should* send an email.
-
-            // Let's adding a logic: if we just changed it to OVERDUE, send an email.
-            // But wait, if I run this cron every day, it will find the same overdue invoices again if I don't exclude OVERDUE status.
-            // My query excluded OVERDUE status, so it will only pick up *newly* overdue invoices.
-            // So yes, I can send an email here.
-
+            // Send reminder email if not draft
             if (invoice.client.email && invoice.status !== "DRAFT") {
                 await sendInvoiceEmail(invoice.id, `Reminder: Invoice ${invoice.number} is Overdue`);
-                // For now reusing standard email is better than nothing.
                 emailedCount++;
             }
 
@@ -63,17 +48,24 @@ export async function checkAndSendReminders() {
                 title: "Invoice Overdue",
                 message: `Invoice ${invoice.number} for ${invoice.client.name} is now overdue.`,
                 link: `/invoices/${invoice.id}`,
+                userId,
+            });
+
+            await logAuditEvent({
+                action: "UPDATE",
+                resource: "Invoice",
+                resourceId: invoice.id,
+                userId,
+                actor: "system-reminders",
+                metadata: { status: "OVERDUE" }
             });
         }
 
         if (updatedCount > 0) {
-            try {
-                revalidatePath("/invoices");
-            } catch (e) { }
+            revalidatePath("/invoices");
         }
 
         return { success: true, updated: updatedCount, emailed: emailedCount };
-
     } catch (error) {
         console.error("Failed to check reminders:", error);
         return { success: false, error: "Internal Server Error" };

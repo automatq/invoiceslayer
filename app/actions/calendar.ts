@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
+import { auth } from "@/lib/auth";
 
 export type CalendarEvent = {
     id: string;
@@ -14,28 +14,35 @@ export type CalendarEvent = {
 
 export async function getCalendarEvents(date: Date): Promise<CalendarEvent[]> {
     try {
+        const session = await auth();
+        if (!session?.user?.id) return [];
+        const userId = session.user.id;
+
         const [invoices, quotes, recurring, payments, expenses] = await Promise.all([
             prisma.invoice.findMany({
+                where: { userId },
                 select: { id: true, number: true, dueDate: true, total: true, status: true, client: { select: { name: true } } },
             }),
             prisma.quote.findMany({
+                where: { userId },
                 select: { id: true, number: true, expiryDate: true, total: true, status: true, client: { select: { name: true } } },
             }),
             prisma.recurringInvoice.findMany({
-                where: { isActive: true },
+                where: { userId, isActive: true },
                 select: { id: true, nextRunDate: true, frequency: true, client: { select: { name: true } } },
             }),
             prisma.payment.findMany({
+                where: { invoice: { userId } },
                 select: { id: true, amount: true, date: true, invoice: { select: { number: true, client: { select: { name: true } } } } },
             }),
             prisma.expense.findMany({
+                where: { userId },
                 select: { id: true, description: true, amount: true, date: true, category: true },
             }),
         ]);
 
         const events: CalendarEvent[] = [];
 
-        // @ts-ignore
         invoices.forEach((inv: any) => {
             if (inv.status !== "PAID" && inv.status !== "CANCELLED") {
                 events.push({
@@ -49,7 +56,6 @@ export async function getCalendarEvents(date: Date): Promise<CalendarEvent[]> {
             }
         });
 
-        // @ts-ignore
         quotes.forEach((quote: any) => {
             if (quote.status === "DRAFT" || quote.status === "SENT") {
                 events.push({
@@ -63,7 +69,6 @@ export async function getCalendarEvents(date: Date): Promise<CalendarEvent[]> {
             }
         });
 
-        // @ts-ignore
         recurring.forEach((rec: any) => {
             events.push({
                 id: rec.id,
@@ -73,7 +78,6 @@ export async function getCalendarEvents(date: Date): Promise<CalendarEvent[]> {
             });
         });
 
-        // @ts-ignore
         payments.forEach((pay: any) => {
             events.push({
                 id: pay.id,
@@ -84,7 +88,6 @@ export async function getCalendarEvents(date: Date): Promise<CalendarEvent[]> {
             });
         });
 
-        // @ts-ignore
         expenses.forEach((exp: any) => {
             events.push({
                 id: exp.id,

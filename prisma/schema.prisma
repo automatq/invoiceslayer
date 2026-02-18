@@ -11,22 +11,74 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  accounts      Account[]
+  sessions      Session[]
+  clients       Client[]
+  invoices      Invoice[]
+  quotes        Quote[]
+  projects      Project[]
+  expenses      Expense[]
+  recurring     RecurringInvoice[]
+  settings      Setting[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+  invoiceTemplate InvoiceTemplate?
+  createdAt     DateTime  @default(now())
+
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
 
 model Client {
   id                String             @id @default(cuid())
   name              String
-  email             String             @unique
+  email             String
   address           String?
   phone             String?
   vatNumber         String?
   photo             String?
+  userId            String
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   invoices          Invoice[]
   quotes            Quote[]
   projects          Project[]
@@ -34,16 +86,20 @@ model Client {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   portalToken       String?            @unique
+
+  @@unique([userId, email])
 }
 
 model Invoice {
   id         String        @id @default(cuid())
-  number     String        @unique
+  number     String
   date       DateTime
   dueDate    DateTime
   status     String        @default("DRAFT") // DRAFT, SENT, PAID, OVERDUE, CANCELLED, PARTIAL
   clientId   String
   client     Client        @relation(fields: [clientId], references: [id])
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   items      InvoiceItem[]
   subtotal   Float         @default(0)
   taxTotal   Float         @default(0)
@@ -51,11 +107,13 @@ model Invoice {
   amountPaid Float         @default(0)
   payments   Payment[]
   projectId  String?
-  project    Project?  @relation(fields: [projectId], references: [id])
+  project    Project?      @relation(fields: [projectId], references: [id])
   notes      String?
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
   escrowContract EscrowContract?
+
+  @@unique([userId, number])
 }
 
 model EscrowContract {
@@ -73,21 +131,25 @@ model EscrowContract {
 
 model Quote {
   id         String      @id @default(cuid())
-  number     String      @unique
+  number     String
   date       DateTime
   expiryDate DateTime
   status     String      @default("DRAFT") // DRAFT, SENT, ACCEPTED, REJECTED
   clientId   String
   client     Client      @relation(fields: [clientId], references: [id])
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   items      QuoteItem[]
   subtotal   Float       @default(0)
   taxTotal   Float       @default(0)
   total      Float
   projectId  String?
-  project    Project?  @relation(fields: [projectId], references: [id])
+  project    Project?    @relation(fields: [projectId], references: [id])
   notes      String?
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
+
+  @@unique([userId, number])
 }
 
 model InvoiceItem {
@@ -129,6 +191,8 @@ model RecurringInvoice {
   id                String   @id @default(cuid())
   clientId          String
   client            Client   @relation(fields: [clientId], references: [id])
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   items             String   // JSON string of items
   frequency         String   // WEEKLY, MONTHLY, QUARTERLY, YEARLY
   nextRunDate       DateTime
@@ -142,6 +206,8 @@ model RecurringInvoice {
 
 model Setting {
   id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   companyName    String
   companyEmail   String
   companyAddress String?
@@ -163,6 +229,8 @@ model Setting {
   localAiModel   String   @default("llama3")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  @@unique([userId])
 }
 
 model Notification {
@@ -173,7 +241,8 @@ model Notification {
   read      Boolean  @default(false)
   date      DateTime @default(now())
   link      String?
-  userId    String?  // Optional relation to User if needed later
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -187,6 +256,8 @@ model Expense {
   receipt     String? // Base64 data URI
   projectId   String?
   project     Project? @relation(fields: [projectId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -198,6 +269,8 @@ model Project {
   status      String    @default("ACTIVE") // ACTIVE, COMPLETED, ARCHIVED
   clientId    String
   client      Client    @relation(fields: [clientId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   invoices    Invoice[]
   quotes      Quote[]
   expenses    Expense[]
@@ -207,6 +280,8 @@ model Project {
 
 model InvoiceTemplate {
   id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   color     String   @default("#0f172a") // Default slate-900
   font      String   @default("inter")
@@ -215,7 +290,10 @@ model InvoiceTemplate {
   isActive  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([userId])
 }
+
 
 // SOC2 Audit Log — records all significant data operations
 model AuditLog {
@@ -226,5 +304,7 @@ model AuditLog {
   actor      String   @default("system") // "system" or user identifier
   ipAddress  String?
   metadata   String?  // JSON string with additional context
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
 }

@@ -1,10 +1,21 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+
+async function getSession() {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+    return session;
+}
 
 export async function getRevenueByMonth(year: number = new Date().getFullYear(), basis: "accrual" | "cash" = "accrual") {
+    const session = await getSession();
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year + 1, 0, 1);
+    const userId = session.user.id;
 
     const monthlyData = Array.from({ length: 12 }, (_, i) => ({
         name: new Date(year, i).toLocaleString('default', { month: 'short' }),
@@ -15,18 +26,12 @@ export async function getRevenueByMonth(year: number = new Date().getFullYear(),
     }));
 
     if (basis === "cash") {
-        // CASH BASIS: Revenue = Payments Received
         const payments = await prisma.payment.findMany({
             where: {
-                date: {
-                    gte: startDate,
-                    lt: endDate,
-                }
+                invoice: { userId },
+                date: { gte: startDate, lt: endDate }
             },
-            select: {
-                date: true,
-                amount: true,
-            }
+            select: { date: true, amount: true }
         });
 
         payments.forEach((payment: any) => {
@@ -34,23 +39,14 @@ export async function getRevenueByMonth(year: number = new Date().getFullYear(),
             monthlyData[month].revenue += payment.amount;
             monthlyData[month].paid += payment.amount;
         });
-
     } else {
-        // ACCRUAL BASIS: Revenue = Invoices Issued (regardless of payment status)
         const invoices = await prisma.invoice.findMany({
             where: {
-                date: {
-                    gte: startDate,
-                    lt: endDate,
-                },
+                userId,
+                date: { gte: startDate, lt: endDate },
                 status: { in: ["PAID", "PARTIAL", "SENT", "OVERDUE"] }
             },
-            select: {
-                date: true,
-                total: true,
-                amountPaid: true,
-                status: true,
-            }
+            select: { date: true, total: true, amountPaid: true }
         });
 
         invoices.forEach((inv: any) => {
@@ -61,14 +57,11 @@ export async function getRevenueByMonth(year: number = new Date().getFullYear(),
         });
     }
 
-    // PROJECTED RECURRING REVENUE
-    // Look at active recurring templates and project their future runs in this year
     const recurringTemplates = await prisma.recurringInvoice.findMany({
-        where: { isActive: true }
+        where: { userId, isActive: true }
     });
 
     const now = new Date();
-
     recurringTemplates.forEach((template: any) => {
         const items = JSON.parse(template.items);
         const subtotal = items.reduce((acc: number, item: any) => acc + (item.quantity * item.unitPrice), 0);
@@ -76,34 +69,21 @@ export async function getRevenueByMonth(year: number = new Date().getFullYear(),
         const totalPerRun = subtotal + taxTotal;
 
         let checkDate = new Date(template.nextRunDate);
-
         let projectedRuns = template.currentOccurrence;
 
-        // Project occurrences until the end of the year or max limit
         while (checkDate < endDate) {
             if (template.maxOccurrences && projectedRuns >= template.maxOccurrences) break;
-
-            // Only project into the "future" relative to now
             if (checkDate >= now && checkDate >= startDate) {
                 const month = checkDate.getMonth();
                 monthlyData[month].projected += totalPerRun;
-                monthlyData[month].revenue += totalPerRun; // Also include in total revenue
+                monthlyData[month].revenue += totalPerRun;
             }
-
             projectedRuns++;
-
-            // Advance based on frequency
-            if (template.frequency === "WEEKLY") {
-                checkDate.setDate(checkDate.getDate() + 7);
-            } else if (template.frequency === "MONTHLY") {
-                checkDate.setMonth(checkDate.getMonth() + 1);
-            } else if (template.frequency === "QUARTERLY") {
-                checkDate.setMonth(checkDate.getMonth() + 3);
-            } else if (template.frequency === "YEARLY") {
-                checkDate.setFullYear(checkDate.getFullYear() + 1);
-            } else {
-                break; // Safety
-            }
+            if (template.frequency === "WEEKLY") checkDate.setDate(checkDate.getDate() + 7);
+            else if (template.frequency === "MONTHLY") checkDate.setMonth(checkDate.getMonth() + 1);
+            else if (template.frequency === "QUARTERLY") checkDate.setMonth(checkDate.getMonth() + 3);
+            else if (template.frequency === "YEARLY") checkDate.setFullYear(checkDate.getFullYear() + 1);
+            else break;
         }
     });
 
@@ -111,11 +91,11 @@ export async function getRevenueByMonth(year: number = new Date().getFullYear(),
 }
 
 export async function getTopCustomers(limit: number = 5) {
+    const session = await getSession();
     const clients = await prisma.client.findMany({
+        where: { userId: session.user.id },
         include: {
-            invoices: {
-                where: { status: "PAID" }
-            }
+            invoices: { where: { status: "PAID" } }
         }
     });
 
@@ -126,51 +106,35 @@ export async function getTopCustomers(limit: number = 5) {
         invoiceCount: client.invoices.length,
     }));
 
-    return clientRevenue
-        .sort((a: any, b: any) => b.totalPaid - a.totalPaid)
-        .slice(0, limit);
+    return clientRevenue.sort((a: any, b: any) => b.totalPaid - a.totalPaid).slice(0, limit);
 }
 
 export async function getInvoiceStatusDistribution() {
+    const session = await getSession();
+    const userId = session.user.id;
     const statusCounts = await prisma.invoice.groupBy({
+        where: { userId },
         by: ['status'],
-        _count: {
-            status: true,
-        },
+        _count: { status: true },
     });
 
-    // Calculate Trend: Total invoices this month vs last month
     const now = new Date();
     const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
     const currentMonthCount = await prisma.invoice.count({
-        where: {
-            date: {
-                gte: startOfCurrentMonth,
-            }
-        }
+        where: { userId, date: { gte: startOfCurrentMonth } }
     });
 
     const lastMonthCount = await prisma.invoice.count({
-        where: {
-            date: {
-                gte: startOfLastMonth,
-                lt: startOfCurrentMonth,
-            }
-        }
+        where: { userId, date: { gte: startOfLastMonth, lt: startOfCurrentMonth } }
     });
 
     let trend = 0;
-    if (lastMonthCount !== 0) {
-        trend = ((currentMonthCount - lastMonthCount) / lastMonthCount) * 100;
-    } else if (currentMonthCount !== 0) {
-        trend = 100;
-    }
+    if (lastMonthCount !== 0) trend = ((currentMonthCount - lastMonthCount) / lastMonthCount) * 100;
+    else if (currentMonthCount !== 0) trend = 100;
 
-    // Ensure all statuses are represented
     const allStatuses = ["DRAFT", "SENT", "PAID", "PARTIAL", "OVERDUE", "CANCELLED"];
-
     const statusData = allStatuses.map(status => ({
         status,
         count: statusCounts.find((s: any) => s.status === status)?._count.status || 0,
@@ -184,20 +148,22 @@ export async function getInvoiceStatusDistribution() {
 }
 
 export async function getDashboardMetrics(year: number = new Date().getFullYear(), basis: "accrual" | "cash" = "accrual") {
+    const session = await getSession();
+    const userId = session.user.id;
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year + 1, 0, 1);
 
-    // 1. Revenue
     let totalRevenue = 0;
     if (basis === "cash") {
         const payments = await prisma.payment.findMany({
-            where: { date: { gte: startDate, lt: endDate } },
+            where: { invoice: { userId }, date: { gte: startDate, lt: endDate } },
             select: { amount: true }
         });
         totalRevenue = payments.reduce((acc: number, p: any) => acc + p.amount, 0);
     } else {
         const invoices = await prisma.invoice.findMany({
             where: {
+                userId,
                 date: { gte: startDate, lt: endDate },
                 status: { in: ["PAID", "PARTIAL", "SENT", "OVERDUE"] }
             },
@@ -206,26 +172,23 @@ export async function getDashboardMetrics(year: number = new Date().getFullYear(
         totalRevenue = invoices.reduce((acc: number, inv: any) => acc + inv.total, 0);
     }
 
-    // 2. Expenses
     const expenses = await prisma.expense.findMany({
-        where: { date: { gte: startDate, lt: endDate } },
+        where: { userId, date: { gte: startDate, lt: endDate } },
         select: { amount: true }
     });
     const totalExpenses = expenses.reduce((acc: number, e: any) => acc + e.amount, 0);
 
-    // 3. Pending/Overdue Counts
     const pendingInvoices = await prisma.invoice.count({
-        where: { status: { in: ["SENT", "PARTIAL"] } }
+        where: { userId, status: { in: ["SENT", "PARTIAL"] } }
     });
 
     const overdueInvoices = await prisma.invoice.count({
-        where: { status: "OVERDUE" }
+        where: { userId, status: "OVERDUE" }
     });
 
-    // 4. Projected Revenue
     let projectedRevenue = 0;
     const recurringTemplates = await prisma.recurringInvoice.findMany({
-        where: { isActive: true }
+        where: { userId, isActive: true }
     });
 
     const now = new Date();
@@ -234,16 +197,12 @@ export async function getDashboardMetrics(year: number = new Date().getFullYear(
         const subtotal = items.reduce((acc: number, item: any) => acc + (item.quantity * item.unitPrice), 0);
         const taxTotal = items.reduce((acc: number, item: any) => acc + (item.quantity * item.unitPrice * (item.taxRate / 100)), 0);
         const totalPerRun = subtotal + taxTotal;
-
         let checkDate = new Date(template.nextRunDate);
         let projectedRuns = template.currentOccurrence;
 
         while (checkDate < endDate) {
             if (template.maxOccurrences && projectedRuns >= template.maxOccurrences) break;
-
-            if (checkDate >= now && checkDate >= startDate) {
-                projectedRevenue += totalPerRun;
-            }
+            if (checkDate >= now && checkDate >= startDate) projectedRevenue += totalPerRun;
             projectedRuns++;
             if (template.frequency === "WEEKLY") checkDate.setDate(checkDate.getDate() + 7);
             else if (template.frequency === "MONTHLY") checkDate.setMonth(checkDate.getMonth() + 1);

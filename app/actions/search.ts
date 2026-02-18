@@ -1,14 +1,25 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+
+async function getSession() {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+    return session;
+}
 
 export async function searchClients(query: string) {
+    const session = await getSession();
     if (!query || query.length < 2) return [];
 
     const clients = await prisma.client.findMany({
         where: {
+            userId: session.user.id,
             OR: [
-                { name: { contains: query } }, // Case-insensitive by default in SQLite/Postgres usually or depends on collation
+                { name: { contains: query } },
                 { email: { contains: query } },
             ],
         },
@@ -24,10 +35,12 @@ export async function searchClients(query: string) {
 }
 
 export async function searchInvoices(query: string) {
+    const session = await getSession();
     if (!query || query.length < 2) return [];
 
     const invoices = await prisma.invoice.findMany({
         where: {
+            userId: session.user.id,
             OR: [
                 { number: { contains: query } },
                 { client: { name: { contains: query } } },

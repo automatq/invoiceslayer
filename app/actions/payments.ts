@@ -4,6 +4,16 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createNotification } from "@/app/actions/notifications";
+import { auth } from "@/lib/auth";
+import { logAuditEvent } from "@/lib/audit";
+
+async function getSession() {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+    return session;
+}
 
 const PaymentSchema = z.object({
     invoiceId: z.string().min(1, "Invoice ID is required"),
@@ -20,6 +30,7 @@ export async function recordPayment(data: {
     method: string;
     notes?: string;
 }) {
+    const session = await getSession();
     const validatedData = PaymentSchema.safeParse(data);
 
     if (!validatedData.success) {
@@ -31,10 +42,16 @@ export async function recordPayment(data: {
     }
 
     const { invoiceId, amount, date, method, notes } = validatedData.data;
+    const userId = session.user.id;
 
     try {
         const result = await prisma.$transaction(async (tx: any) => {
-            // 1. Create Payment record
+            const invoice = await tx.invoice.findUnique({
+                where: { id: invoiceId, userId },
+            });
+
+            if (!invoice) throw new Error("Invoice not found or unauthorized");
+
             const payment = await tx.payment.create({
                 data: {
                     invoiceId,
@@ -45,26 +62,14 @@ export async function recordPayment(data: {
                 },
             });
 
-            // 2. Update Invoice amountPaid and Status
-            const invoice = await tx.invoice.findUnique({
-                where: { id: invoiceId },
-            });
-
-            if (!invoice) {
-                throw new Error("Invoice not found");
-            }
-
             const newAmountPaid = invoice.amountPaid + amount;
             let newStatus = invoice.status;
 
-            if (newAmountPaid >= invoice.total) {
-                newStatus = "PAID";
-            } else if (newAmountPaid > 0) {
-                newStatus = "PARTIAL"; // We need to make sure this is a valid status in our system
-            }
+            if (newAmountPaid >= invoice.total) newStatus = "PAID";
+            else if (newAmountPaid > 0) newStatus = "PARTIAL";
 
             await tx.invoice.update({
-                where: { id: invoiceId },
+                where: { id: invoiceId, userId },
                 data: {
                     amountPaid: newAmountPaid,
                     status: newStatus,
@@ -74,12 +79,20 @@ export async function recordPayment(data: {
             return { payment, invoiceNumber: invoice.number };
         });
 
-        // 3. Trigger Notification
+        await logAuditEvent({
+            action: "CREATE",
+            resource: "Payment",
+            resourceId: result.payment.id,
+            userId,
+            metadata: { amount, invoiceId }
+        });
+
         await createNotification({
             type: "SUCCESS",
             title: "Payment Received",
             message: `Payment of $${amount.toFixed(2)} received for invoice ${result.invoiceNumber}`,
             link: `/invoices/${invoiceId}`,
+            userId,
         });
 
         revalidatePath(`/invoices/${invoiceId}`);
@@ -94,57 +107,54 @@ export async function recordPayment(data: {
 }
 
 export async function getPayments(invoiceId: string) {
+    const session = await getSession();
     return await prisma.payment.findMany({
-        where: { invoiceId },
+        where: { invoiceId, invoice: { userId: session.user.id } },
         orderBy: { date: "desc" },
     });
 }
 
 export async function deletePayment(paymentId: string, invoiceId: string) {
+    const session = await getSession();
+    const userId = session.user.id;
     try {
         await prisma.$transaction(async (tx: any) => {
-            // 1. Get payment to know amount
             const payment = await tx.payment.findUnique({
-                where: { id: paymentId },
+                where: { id: paymentId, invoice: { userId } },
             });
 
-            if (!payment) {
-                throw new Error("Payment not found");
-            }
+            if (!payment) throw new Error("Payment not found or unauthorized");
 
-            // 2. Delete payment
-            await tx.payment.delete({
-                where: { id: paymentId },
-            });
+            await tx.payment.delete({ where: { id: paymentId } });
 
-            // 3. Update Invoice amountPaid
             const invoice = await tx.invoice.findUnique({
-                where: { id: invoiceId },
+                where: { id: invoiceId, userId },
             });
 
-            if (!invoice) {
-                throw new Error("Invoice not found");
-            }
+            if (!invoice) throw new Error("Invoice not found");
 
             const newAmountPaid = Math.max(0, invoice.amountPaid - payment.amount);
             let newStatus = invoice.status;
 
-            if (newAmountPaid >= invoice.total) {
-                newStatus = "PAID";
-            } else if (newAmountPaid > 0) {
-                newStatus = "PARTIAL";
-            } else {
-                newStatus = "SENT"; // Revert to SENT if no payments left (or DRAFT if it was never sent? assume SENT for simplicity)
-                // Ideally check if createdAt == updatedAt or something but SENT is safer than DRAFT for an active invoice
-            }
+            if (newAmountPaid >= invoice.total) newStatus = "PAID";
+            else if (newAmountPaid > 0) newStatus = "PARTIAL";
+            else newStatus = "SENT";
 
             await tx.invoice.update({
-                where: { id: invoiceId },
+                where: { id: invoiceId, userId },
                 data: {
                     amountPaid: newAmountPaid,
                     status: newStatus,
                 },
             });
+        });
+
+        await logAuditEvent({
+            action: "DELETE",
+            resource: "Payment",
+            resourceId: paymentId,
+            userId,
+            metadata: { invoiceId }
         });
 
         revalidatePath(`/invoices/${invoiceId}`);

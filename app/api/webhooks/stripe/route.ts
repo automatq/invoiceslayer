@@ -20,11 +20,8 @@ export async function POST(req: Request) {
 
     try {
         if (!signature || !webhookSecret) {
-            // If no secret, we can't verify. Logic regarding development without secret could go here, 
-            // but for security we fail.
             return new NextResponse("Webhook secret or signature missing", { status: 400 });
         }
-
         event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err: any) {
         console.error(`Webhook Error: ${err.message}`);
@@ -34,18 +31,20 @@ export async function POST(req: Request) {
     try {
         if (event.type === "checkout.session.completed") {
             const session = event.data.object as Stripe.Checkout.Session;
-
-            // Retrieve metadata to find invoice ID
             const invoiceId = session.metadata?.invoiceId;
 
             if (invoiceId) {
                 console.log(`Payment succeeded for invoice: ${invoiceId}`);
 
-                // Fetch invoice for number
+                // Fetch invoice with userId
                 const invoice = await prisma.invoice.findUnique({
                     where: { id: invoiceId },
-                    select: { number: true }
+                    select: { number: true, userId: true }
                 });
+
+                if (!invoice) return new NextResponse("Invoice not found", { status: 404 });
+
+                const userId = invoice.userId;
 
                 // Update Invoice Status
                 await prisma.invoice.update({
@@ -74,6 +73,7 @@ export async function POST(req: Request) {
                     resource: "Invoice",
                     resourceId: invoiceId,
                     actor: "stripe-webhook",
+                    userId,
                     metadata: { event: event.type, status: "PAID" }
                 });
 
@@ -82,21 +82,21 @@ export async function POST(req: Request) {
                     resource: "Payment",
                     resourceId: payment.id,
                     actor: "stripe-webhook",
+                    userId,
                     metadata: { amount: payment.amount }
                 });
 
-                // Trigger Notification
                 await createNotification({
                     type: "SUCCESS",
                     title: "Stripe Payment Success",
-                    message: `Payment of $${session.amount_total ? (session.amount_total / 100).toFixed(2) : 0} received for invoice ${invoice?.number || invoiceId}`,
+                    message: `Payment of $${session.amount_total ? (session.amount_total / 100).toFixed(2) : 0} received for invoice ${invoice.number}`,
                     link: `/invoices/${invoiceId}`,
+                    userId,
                 });
             }
         }
 
         return new NextResponse(null, { status: 200 });
-
     } catch (error) {
         console.error("Error processing webhook:", error);
         return new NextResponse("Internal Server Error", { status: 500 });

@@ -2,12 +2,25 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/lib/auth";
+
+async function getSession() {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+    return session;
+}
 
 export type NotificationType = "INFO" | "WARNING" | "SUCCESS" | "ERROR";
 
 export async function getNotifications() {
     try {
+        const session = await auth();
+        if (!session?.user?.id) return [];
+
         const notifications = await prisma.notification.findMany({
+            where: { userId: session.user.id },
             orderBy: {
                 createdAt: "desc",
             },
@@ -22,8 +35,12 @@ export async function getNotifications() {
 
 export async function getUnreadCount() {
     try {
+        const session = await auth();
+        if (!session?.user?.id) return 0;
+
         const count = await prisma.notification.count({
             where: {
+                userId: session.user.id,
                 read: false,
             },
         });
@@ -34,9 +51,10 @@ export async function getUnreadCount() {
 }
 
 export async function markAsRead(id: string) {
+    const session = await getSession();
     try {
         await prisma.notification.update({
-            where: { id },
+            where: { id, userId: session.user.id },
             data: { read: true },
         });
         revalidatePath("/");
@@ -47,9 +65,10 @@ export async function markAsRead(id: string) {
 }
 
 export async function markAllAsRead() {
+    const session = await getSession();
     try {
         await prisma.notification.updateMany({
-            where: { read: false },
+            where: { userId: session.user.id, read: false },
             data: { read: true },
         });
         revalidatePath("/");
@@ -64,7 +83,7 @@ export async function createNotification(data: {
     title: string;
     message?: string;
     link?: string;
-    userId?: string;
+    userId: string; // userId is required in the schema now
 }) {
     try {
         const notification = await prisma.notification.create({

@@ -4,12 +4,22 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { sendInvoiceEmail } from "@/app/actions/email";
 import { z } from "zod";
-import { addWeeks, addMonths, addYears, parseISO } from "date-fns";
+import { addWeeks, addMonths, addYears } from "date-fns";
 import { createNotification } from "@/app/actions/notifications";
+import { auth } from "@/lib/auth";
+import { logAuditEvent } from "@/lib/audit";
+
+async function getSession() {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+    return session;
+}
 
 const RecurringInvoiceSchema = z.object({
     clientId: z.string().min(1, "Client is required"),
-    items: z.string().min(1, "Items are required"), // JSON string
+    items: z.string().min(1, "Items are required"),
     frequency: z.enum(["WEEKLY", "MONTHLY", "QUARTERLY", "YEARLY"]),
     nextRunDate: z.date(),
     maxOccurrences: z.number().int().min(1).nullable().optional(),
@@ -19,7 +29,9 @@ const RecurringInvoiceSchema = z.object({
 });
 
 export async function getRecurringInvoices() {
+    const session = await getSession();
     return await prisma.recurringInvoice.findMany({
+        where: { userId: session.user.id },
         include: {
             client: true,
         },
@@ -28,8 +40,9 @@ export async function getRecurringInvoices() {
 }
 
 export async function getRecurringInvoice(id: string) {
+    const session = await getSession();
     return await prisma.recurringInvoice.findUnique({
-        where: { id },
+        where: { id, userId: session.user.id },
         include: {
             client: true,
         },
@@ -44,10 +57,12 @@ export async function createRecurringInvoice(data: {
     maxOccurrences?: number | null;
     notes?: string;
 }) {
+    const session = await getSession();
     try {
         const recurring = await prisma.recurringInvoice.create({
             data: {
                 clientId: data.clientId,
+                userId: session.user.id,
                 items: JSON.stringify(data.items),
                 frequency: data.frequency,
                 nextRunDate: data.nextRunDate,
@@ -56,11 +71,14 @@ export async function createRecurringInvoice(data: {
             },
         });
 
-        try {
-            try {
-                revalidatePath("/recurring");
-            } catch (e) { }
-        } catch (e) { }
+        await logAuditEvent({
+            action: "CREATE",
+            resource: "RecurringInvoice",
+            resourceId: recurring.id,
+            userId: session.user.id
+        });
+
+        revalidatePath("/recurring");
         return { success: true, id: recurring.id };
     } catch (e) {
         console.error(e);
@@ -77,9 +95,10 @@ export async function updateRecurringInvoice(id: string, data: {
     isActive: boolean;
     notes?: string;
 }) {
+    const session = await getSession();
     try {
         await prisma.recurringInvoice.update({
-            where: { id },
+            where: { id, userId: session.user.id },
             data: {
                 clientId: data.clientId,
                 items: JSON.stringify(data.items),
@@ -91,12 +110,15 @@ export async function updateRecurringInvoice(id: string, data: {
             },
         });
 
-        try {
-            try {
-                revalidatePath("/recurring");
-            } catch (e) { }
-            revalidatePath(`/recurring/${id}`);
-        } catch (e) { }
+        await logAuditEvent({
+            action: "UPDATE",
+            resource: "RecurringInvoice",
+            resourceId: id,
+            userId: session.user.id
+        });
+
+        revalidatePath("/recurring");
+        revalidatePath(`/recurring/${id}`);
         return { success: true };
     } catch (e) {
         console.error(e);
@@ -105,13 +127,20 @@ export async function updateRecurringInvoice(id: string, data: {
 }
 
 export async function deleteRecurringInvoice(id: string) {
+    const session = await getSession();
     try {
         await prisma.recurringInvoice.delete({
-            where: { id },
+            where: { id, userId: session.user.id },
         });
-        try {
-            revalidatePath("/recurring");
-        } catch (e) { }
+
+        await logAuditEvent({
+            action: "DELETE",
+            resource: "RecurringInvoice",
+            resourceId: id,
+            userId: session.user.id
+        });
+
+        revalidatePath("/recurring");
         return { success: true };
     } catch (e) {
         return { success: false, message: "Failed to delete recurring invoice" };
@@ -132,30 +161,36 @@ export async function processRecurringInvoices() {
     for (const recurring of dueRecurring) {
         try {
             const result = await prisma.$transaction(async (tx) => {
-                // 1. Create Invoice
                 const items = JSON.parse(recurring.items);
                 const subtotal = items.reduce((acc: number, item: any) => acc + (item.quantity * item.unitPrice), 0);
                 const taxTotal = items.reduce((acc: number, item: any) => acc + (item.quantity * item.unitPrice * (item.taxRate / 100)), 0);
                 const total = subtotal + taxTotal;
 
-                // Generate Invoice Number
+                // Per-user numbering
                 const lastInvoice = await tx.invoice.findFirst({
+                    where: { userId: recurring.userId },
                     orderBy: { createdAt: "desc" },
                 });
 
                 let nextNumber = "INV-001";
                 if (lastInvoice && lastInvoice.number.startsWith("INV-")) {
-                    const lastNum = parseInt(lastInvoice.number.split("-")[1], 10);
-                    nextNumber = `INV-${String(lastNum + 1).padStart(3, "0")}`;
+                    const lastNumSplit = lastInvoice.number.split("-")[1];
+                    if (lastNumSplit) {
+                        const lastNumNum = parseInt(lastNumSplit, 10);
+                        if (!isNaN(lastNumNum)) {
+                            nextNumber = `INV-${String(lastNumNum + 1).padStart(3, "0")}`;
+                        }
+                    }
                 }
 
                 const newInvoice = await tx.invoice.create({
                     data: {
                         number: nextNumber,
                         clientId: recurring.clientId,
+                        userId: recurring.userId,
                         date: new Date(),
-                        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // +30 days
-                        status: "SENT", // Set to SENT immediately as we will email it
+                        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                        status: "SENT",
                         subtotal,
                         taxTotal,
                         total,
@@ -179,24 +214,14 @@ export async function processRecurringInvoices() {
                     },
                 });
 
-                // 2. Calculate next run date
                 let nextDate = new Date(recurring.nextRunDate);
                 switch (recurring.frequency) {
-                    case "WEEKLY":
-                        nextDate = addWeeks(nextDate, 1);
-                        break;
-                    case "MONTHLY":
-                        nextDate = addMonths(nextDate, 1);
-                        break;
-                    case "QUARTERLY":
-                        nextDate = addMonths(nextDate, 3);
-                        break;
-                    case "YEARLY":
-                        nextDate = addYears(nextDate, 1);
-                        break;
+                    case "WEEKLY": nextDate = addWeeks(nextDate, 1); break;
+                    case "MONTHLY": nextDate = addMonths(nextDate, 1); break;
+                    case "QUARTERLY": nextDate = addMonths(nextDate, 3); break;
+                    case "YEARLY": nextDate = addYears(nextDate, 1); break;
                 }
 
-                // Update Recurring Record
                 const isFinished = recurring.maxOccurrences && (recurring.currentOccurrence + 1 >= recurring.maxOccurrences);
 
                 await tx.recurringInvoice.update({
@@ -211,22 +236,28 @@ export async function processRecurringInvoices() {
                 return { id: newInvoice.id, number: newInvoice.number };
             });
 
-            // Email the invoice
             if (result) {
                 await sendInvoiceEmail(result.id);
 
-                // Fetch client name for notification
                 const client = await prisma.client.findUnique({
                     where: { id: recurring.clientId },
                     select: { name: true }
                 });
 
-                // Trigger Notification
                 await createNotification({
                     type: "INFO",
                     title: "Recurring Invoice Generated",
                     message: `Invoice ${result.number} was automatically generated for ${client?.name || 'a client'}`,
                     link: `/invoices/${result.id}`,
+                    userId: recurring.userId
+                });
+
+                await logAuditEvent({
+                    action: "CREATE",
+                    resource: "Invoice",
+                    resourceId: result.id,
+                    userId: recurring.userId,
+                    metadata: { type: "RECURRING_GENERATED", recurringId: recurring.id }
                 });
             }
 
@@ -237,11 +268,7 @@ export async function processRecurringInvoices() {
     }
 
     if (processedCount > 0) {
-        try {
-            revalidatePath("/invoices");
-        } catch (e) {
-            // Ignore revalidation error in script context
-        }
+        revalidatePath("/invoices");
     }
 
     return { processed: processedCount };
