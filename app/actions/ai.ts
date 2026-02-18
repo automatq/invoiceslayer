@@ -12,10 +12,11 @@ interface AiResponse {
 
 async function getRequiredSession() {
     const session = await auth();
-    if (!session?.user?.id) {
+    const userId = session?.user?.id;
+    if (!userId) {
         throw new Error("Unauthorized");
     }
-    return { userId: session.user.id, session };
+    return { userId };
 }
 
 
@@ -86,10 +87,11 @@ export async function saveLocalAiSettings(url: string, model: string) {
  */
 export async function generateText(prompt: string): Promise<string | null> {
     const session = await auth();
-    if (!session?.user?.id) return null;
+    const userId = session?.user?.id;
+    if (!userId) return null;
 
     const settings = await prisma.setting.findUnique({
-        where: { userId: session.user.id },
+        where: { userId },
         select: { localAiUrl: true, localAiModel: true }
     });
 
