@@ -5,12 +5,11 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
     try {
+        const cronSecret = process.env.CRON_SECRET;
         const authHeader = request.headers.get("authorization");
-        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-            // For now, allowing unauthenticated for testing/localhost if env is not set, 
-            // or check if it's a Vercel Cron
-            // actually, let's keep it simple for now and just run it. 
-            // In production, we should lock this down.
+
+        if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         const result = await processRecurringInvoices();

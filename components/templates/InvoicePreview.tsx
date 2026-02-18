@@ -29,7 +29,6 @@ export function InvoicePreview({ settings }: InvoicePreviewProps) {
         ],
         subtotal: 1900,
         taxTotal: 247,
-        taxTotal: 247,
         total: 2147,
         escrowContract: {
             platform: "FIGMA",

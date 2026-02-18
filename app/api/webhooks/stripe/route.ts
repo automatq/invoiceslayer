@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
 import { createNotification } from "@/app/actions/notifications";
+import { logAuditEvent } from "@/lib/audit";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: "2026-01-28.clover" as any,
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
         event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err: any) {
         console.error(`Webhook Error: ${err.message}`);
-        return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
+        return new NextResponse("Bad Request", { status: 400 });
     }
 
     try {
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
                 });
 
                 // Create Payment Record
-                await prisma.payment.create({
+                const payment = await prisma.payment.create({
                     data: {
                         invoiceId: invoiceId,
                         amount: session.amount_total ? session.amount_total / 100 : 0,
@@ -66,6 +67,22 @@ export async function POST(req: Request) {
                         method: "CREDIT_CARD",
                         notes: `Stripe Session: ${session.id}`
                     }
+                });
+
+                await logAuditEvent({
+                    action: "UPDATE",
+                    resource: "Invoice",
+                    resourceId: invoiceId,
+                    actor: "stripe-webhook",
+                    metadata: { event: event.type, status: "PAID" }
+                });
+
+                await logAuditEvent({
+                    action: "CREATE",
+                    resource: "Payment",
+                    resourceId: payment.id,
+                    actor: "stripe-webhook",
+                    metadata: { amount: payment.amount }
                 });
 
                 // Trigger Notification

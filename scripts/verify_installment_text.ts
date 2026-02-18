@@ -1,6 +1,6 @@
 
-import { processRecurringInvoices } from "./app/actions/recurring";
-import { prisma } from "./lib/prisma";
+import { processRecurringInvoices } from "../app/actions/recurring";
+import { prisma } from "../lib/prisma";
 
 async function verify() {
     console.log("Forcing recurring invoice to be due...");

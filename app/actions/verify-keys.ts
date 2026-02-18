@@ -33,8 +33,7 @@ export async function verifyStripeConnection(secretKey: string) {
 
     try {
         const stripe = new Stripe(secretKey, {
-            apiVersion: "2024-06-20", // Use a recent version or default
-            typescript: true,
+            apiVersion: "2026-01-28.clover",
         });
 
         // Try to list 1 customer to verify auth

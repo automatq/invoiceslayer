@@ -5,8 +5,12 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
     try {
+        const cronSecret = process.env.CRON_SECRET;
         const authHeader = request.headers.get("authorization");
-        // Logic to verify auth header if needed
+
+        if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
 
         const result = await checkAndSendReminders();
         return NextResponse.json(result);

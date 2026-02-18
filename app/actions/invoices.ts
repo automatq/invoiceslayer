@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createNotification } from "@/app/actions/notifications";
+import { logAuditEvent } from "@/lib/audit";
 
 export async function getInvoices() {
     return await prisma.invoice.findMany({
@@ -251,6 +252,7 @@ export async function createInvoice(data: {
         revalidatePath("/invoices");
         revalidatePath("/reports");
         revalidatePath("/");
+        await logAuditEvent({ action: "CREATE", resource: "Invoice", resourceId: invoice.id, metadata: { number: invoice.number } });
         return { success: true, invoiceId: invoice.id };
     } catch (e) {
         console.error(e);
@@ -264,6 +266,7 @@ export async function deleteInvoice(id: string) {
             where: { id },
         });
         revalidatePath("/invoices");
+        await logAuditEvent({ action: "DELETE", resource: "Invoice", resourceId: id });
         return { success: true };
     } catch (e) {
         return { message: "Database Error: Failed to delete invoice" };
@@ -336,6 +339,7 @@ export async function updateInvoice(id: string, data: {
         revalidatePath(`/invoices/${id}`);
         revalidatePath("/reports");
         revalidatePath("/");
+        await logAuditEvent({ action: "UPDATE", resource: "Invoice", resourceId: id });
         return { success: true };
     } catch (e) {
         console.error(e);

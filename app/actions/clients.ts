@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { logAuditEvent } from "@/lib/audit";
 
 const ClientSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -43,6 +44,7 @@ export async function createClient(formData: FormData) {
         await prisma.client.create({
             data: validatedData.data,
         });
+        await logAuditEvent({ action: "CREATE", resource: "Client", metadata: { name: validatedData.data.name } });
     } catch (e) {
         return { message: "Database Error: Failed to create client" };
     }
@@ -86,6 +88,7 @@ export async function updateClient(id: string, formData: FormData) {
             where: { id },
             data: validatedData.data,
         });
+        await logAuditEvent({ action: "UPDATE", resource: "Client", resourceId: id });
     } catch (e) {
         return { message: "Database Error: Failed to update client" };
     }
@@ -126,6 +129,7 @@ export async function deleteClient(id: string) {
             where: { id },
         });
         revalidatePath("/clients");
+        await logAuditEvent({ action: "DELETE", resource: "Client", resourceId: id });
         return { success: true };
     } catch (e: any) {
         console.error("Delete client error:", e);

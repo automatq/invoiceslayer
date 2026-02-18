@@ -39,9 +39,9 @@ export default async function InvoiceDetailsPage({
         client: {
             name: invoice.client.name,
             email: invoice.client.email,
-            address: invoice.client.address,
-            phone: invoice.client.phone,
-            vatNumber: invoice.client.vatNumber,
+            address: invoice.client.address || "",
+            phone: invoice.client.phone || "",
+            vatNumber: invoice.client.vatNumber || "",
         },
         items: invoice.items.map((item: any) => ({
             description: item.description,
@@ -54,7 +54,7 @@ export default async function InvoiceDetailsPage({
         taxTotal: taxTotal,
         total: total,
         amountPaid: amountPaid,
-        notes: invoice.notes,
+        notes: invoice.notes || undefined,
         status: invoice.status,
     };
 
@@ -63,14 +63,14 @@ export default async function InvoiceDetailsPage({
         color: template?.color || "#0f172a",
         font: template?.font || "inter",
         layout: template?.layout || "modern",
-        logoUrl: template?.logoUrl || settings?.companyLogo,
+        logoUrl: (template?.logoUrl || settings?.companyLogo) || undefined,
         companyName: settings?.companyName || "Your Company",
-        companyEmail: settings?.companyEmail,
-        companyAddress: settings?.companyAddress,
-        companyPhone: settings?.companyPhone,
-        companyWebsite: settings?.companyWebsite,
-        companyTaxId: settings?.companyTaxId,
-        paymentInstructions: settings?.paymentInstructions,
+        companyEmail: settings?.companyEmail || undefined,
+        companyAddress: settings?.companyAddress || undefined,
+        companyPhone: settings?.companyPhone || undefined,
+        companyWebsite: settings?.companyWebsite || undefined,
+        companyTaxId: settings?.companyTaxId || undefined,
+        paymentInstructions: settings?.paymentInstructions || undefined,
     };
 
     return (

@@ -150,37 +150,36 @@ export async function GET() {
                         "200": { description: "Updated invoice" }
                     }
                 }
-            }
-        },
-        "/api/v1/agent?resource=escrow": {
-            patch: {
-                summary: "Update Escrow Status",
-                tags: ["Escrow"],
-                requestBody: {
-                    required: true,
-                    content: {
-                        "application/json": {
-                            schema: {
-                                type: "object",
-                                required: ["invoiceId", "status"],
-                                properties: {
-                                    invoiceId: { type: "string" },
-                                    status: { type: "string", enum: ["PENDING", "RELEASED", "CANCELLED"] }
+            },
+            "/api/v1/agent?resource=escrow": {
+                patch: {
+                    summary: "Update Escrow Status",
+                    tags: ["Escrow"],
+                    requestBody: {
+                        required: true,
+                        content: {
+                            "application/json": {
+                                schema: {
+                                    type: "object",
+                                    required: ["invoiceId", "status"],
+                                    properties: {
+                                        invoiceId: { type: "string" },
+                                        status: { type: "string", enum: ["PENDING", "RELEASED", "CANCELLED"] }
+                                    }
                                 }
                             }
                         }
-                    }
-                },
-                responses: {
-                    "200": {
-                        description: "Updated escrow contract",
-                        content: { "application/json": { schema: { type: "object" } } }
+                    },
+                    responses: {
+                        "200": {
+                            description: "Updated escrow contract",
+                            content: { "application/json": { schema: { type: "object" } } }
+                        }
                     }
                 }
             }
         }
-    }
-};
+    };
 
-return NextResponse.json(spec);
+    return NextResponse.json(spec);
 }

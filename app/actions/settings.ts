@@ -2,6 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { unstable_noStore as noStore } from "next/cache";
+import { logAuditEvent } from "@/lib/audit";
 
 export type SettingsFormValues = {
     companyName: string;
@@ -26,29 +28,20 @@ export type SettingsFormValues = {
 
 export async function createSettings(data: SettingsFormValues) {
     try {
-        // Check if settings already exist, if so update, else create
         const existing = await prisma.setting.findFirst();
-
         if (existing) {
-            await prisma.setting.update({
-                where: { id: existing.id },
-                data,
-            });
+            await prisma.setting.update({ where: { id: existing.id }, data });
         } else {
-            await prisma.setting.create({
-                data,
-            });
+            await prisma.setting.create({ data });
         }
-
         revalidatePath("/");
+        await logAuditEvent({ action: "SETTINGS_CHANGE", resource: "Settings" });
         return { success: true };
     } catch (e) {
         console.error(e);
         return { success: false, message: "Failed to save settings" };
     }
 }
-
-import { unstable_noStore as noStore } from "next/cache";
 
 export async function getSettings() {
     noStore();
@@ -102,6 +95,7 @@ export async function purgeAllData() {
         revalidatePath("/expenses");
         revalidatePath("/recurring");
 
+        await logAuditEvent({ action: "DATA_PURGE", resource: "System", metadata: { purgedAt: new Date().toISOString() } });
         return { success: true };
     } catch (e) {
         console.error("Purge failed:", e);

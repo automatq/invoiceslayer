@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma as db } from "@/lib/prisma";
+import { logAuditEvent } from "@/lib/audit";
+import { rateLimit, getIdentifier } from "@/lib/rate-limit";
 
 // Helper for authorized checks
 async function authenticate(req: NextRequest) {
@@ -19,6 +21,11 @@ async function authenticate(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+    const rl = rateLimit(`agent:${getIdentifier(req)}`, { limit: 60, windowSec: 60 });
+    if (!rl.success) {
+        return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });
+    }
+
     if (!await authenticate(req)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -68,11 +75,17 @@ export async function GET(req: NextRequest) {
         });
 
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("[Agent GET] Error:", error);
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
 
 export async function POST(req: NextRequest) {
+    const rl = rateLimit(`agent:${getIdentifier(req)}`, { limit: 60, windowSec: 60 });
+    if (!rl.success) {
+        return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });
+    }
+
     if (!await authenticate(req)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -124,13 +137,15 @@ export async function POST(req: NextRequest) {
                     }
                 }
             });
+            await logAuditEvent({ action: "CREATE", resource: "Invoice", resourceId: invoice.id, actor: "api-key" });
             return NextResponse.json(invoice);
         }
 
         return NextResponse.json({ error: "Resource not supported for POST or missing resource param" }, { status: 400 });
 
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("[Agent POST] Error:", error);
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
 
@@ -178,6 +193,7 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: "Resource not supported for PATCH" }, { status: 400 });
 
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("[Agent PATCH] Error:", error);
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

@@ -32,7 +32,7 @@ const InvoiceSchema = z.object({
     date: z.date(),
     dueDate: z.date(),
     items: z.array(InvoiceItemSchema).min(1, "At least one item is required"),
-    enableEscrow: z.boolean().default(false),
+    enableEscrow: z.boolean(),
     escrowPlatform: z.string().optional(),
     escrowResourceId: z.string().optional(),
     escrowCondition: z.string().optional(),
@@ -235,7 +235,7 @@ export function InvoiceForm({
                     </div>
                     <Switch
                         checked={watch("enableEscrow")}
-                        onCheckedChange={(checked) => setValue("enableEscrow", checked)}
+                        onCheckedChange={(checked) => setValue("enableEscrow", !!checked)}
                     />
                 </CardHeader>
                 {watch("enableEscrow") && (

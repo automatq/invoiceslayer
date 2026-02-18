@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Image from "next/image";
 
 const SettingsSchema = z.object({
     companyName: z.string().min(1, "Company name is required"),
@@ -79,6 +80,17 @@ export default function OnboardingPage() {
                     <CardTitle>Welcome to InvoiceSlayer</CardTitle>
                     <CardDescription>Let's get you set up with your company details.</CardDescription>
                 </CardHeader>
+                <div className="flex justify-center pb-2">
+                    <Image
+                        src="/images/gifx.gif"
+                        alt="Invoice Slayer"
+                        width={280}
+                        height={280}
+                        className="rounded-lg object-cover"
+                        priority
+                        unoptimized
+                    />
+                </div>
                 <form onSubmit={handleSubmit(onSubmit)}>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">

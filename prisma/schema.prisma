@@ -216,3 +216,15 @@ model InvoiceTemplate {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// SOC2 Audit Log — records all significant data operations
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String   // CREATE, UPDATE, DELETE, VIEW, EXPORT, SETTINGS_CHANGE, DATA_PURGE
+  resource   String   // Invoice, Client, Quote, Payment, Settings, etc.
+  resourceId String?  // ID of the affected record
+  actor      String   @default("system") // "system" or user identifier
+  ipAddress  String?
+  metadata   String?  // JSON string with additional context
+  createdAt  DateTime @default(now())
+}
