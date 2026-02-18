@@ -13,6 +13,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Image from "next/image";
+import { CheckCircle2, ArrowRight, Mail, CreditCard, Bot, Zap, ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { InteractiveButton } from "@/components/ui/interactive-button";
 
 const SettingsSchema = z.object({
     companyName: z.string().min(1, "Company name is required"),
@@ -27,8 +30,110 @@ const SettingsSchema = z.object({
 
 type SettingsFormValues = z.infer<typeof SettingsSchema>;
 
+function StepIndicator({ current, total }: { current: number; total: number }) {
+    return (
+        <div className="flex items-center justify-center gap-2 mb-8">
+            {Array.from({ length: total }).map((_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                    <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${i < current
+                                ? "bg-green-500 text-white"
+                                : i === current
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted text-muted-foreground"
+                            }`}
+                    >
+                        {i < current ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
+                    </div>
+                    {i < total - 1 && (
+                        <div className={`h-0.5 w-8 transition-all duration-300 ${i < current ? "bg-green-500" : "bg-muted"}`} />
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+}
+
+interface ChecklistItem {
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+    href: string;
+    done?: boolean;
+    badge?: string;
+}
+
+function SetupChecklist() {
+    const items: ChecklistItem[] = [
+        {
+            icon: <CheckCircle2 className="w-5 h-5 text-green-500" />,
+            title: "Company details saved",
+            description: "Your profile is set up and ready.",
+            href: "#",
+            done: true,
+        },
+        {
+            icon: <Mail className="w-5 h-5 text-orange-500" />,
+            title: "Set up email sending",
+            description: "Add a Resend API key in Settings to send invoices by email.",
+            href: "/settings",
+            badge: "Optional",
+        },
+        {
+            icon: <Bot className="w-5 h-5 text-violet-500" />,
+            title: "Configure AI",
+            description: "Set up AI-powered invoice generation in Settings.",
+            href: "/settings",
+            badge: "Optional",
+        },
+        {
+            icon: <CreditCard className="w-5 h-5 text-purple-500" />,
+            title: "Connect Stripe",
+            description: "Accept online payments with a payment link on every invoice.",
+            href: "/settings",
+            badge: "Optional",
+        },
+        {
+            icon: <Zap className="w-5 h-5 text-blue-500" />,
+            title: "Create your first invoice",
+            description: "You're ready to start billing clients.",
+            href: "/invoices/new",
+        },
+    ];
+
+    return (
+        <div className="space-y-2">
+            {items.map((item, i) => (
+                <Link
+                    key={i}
+                    href={item.href}
+                    className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${item.done
+                            ? "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 cursor-default pointer-events-none"
+                            : "border-border hover:border-primary/40 hover:bg-muted/50 cursor-pointer"
+                        }`}
+                >
+                    <div className="mt-0.5 shrink-0">{item.icon}</div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium">{item.title}</p>
+                            {item.badge && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                                    {item.badge}
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
+                    </div>
+                    {!item.done && <ChevronRight className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />}
+                </Link>
+            ))}
+        </div>
+    );
+}
+
 export default function OnboardingPage() {
     const router = useRouter();
+    const [step, setStep] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const {
@@ -55,11 +160,8 @@ export default function OnboardingPage() {
         try {
             const result = await createSettings(data);
             if (result.success) {
-                toast.success("Welcome aboard!", {
-                    description: "Your company details have been saved.",
-                });
-                router.push("/");
-                router.refresh();
+                toast.success("Company details saved!");
+                setStep(2);
             } else {
                 toast.error("Failed to save settings", {
                     description: result.message || "Please try again.",
@@ -75,86 +177,166 @@ export default function OnboardingPage() {
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-neutral-900 p-4">
-            <Card className="w-full max-w-md">
-                <CardHeader>
-                    <CardTitle>Welcome to InvoiceSlayer</CardTitle>
-                    <CardDescription>Let's get you set up with your company details.</CardDescription>
-                </CardHeader>
-                <div className="flex justify-center pb-2">
+            <div className="w-full max-w-lg">
+                {/* Logo */}
+                <div className="flex justify-center mb-6">
                     <Image
                         src="/images/gifx.gif"
-                        alt="Invoice Slayer"
-                        width={280}
-                        height={280}
-                        className="rounded-lg object-cover"
+                        alt="InvoiceSlayer"
+                        width={80}
+                        height={80}
+                        className="rounded-xl object-cover"
                         priority
                         unoptimized
                     />
                 </div>
-                <form onSubmit={handleSubmit(onSubmit)}>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="companyName">Company Name</Label>
-                            <Input id="companyName" {...register("companyName")} placeholder="Acme Inc." />
-                            {errors.companyName && <p className="text-xs text-red-500">{errors.companyName.message}</p>}
-                        </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="companyEmail">Company Email</Label>
-                            <Input id="companyEmail" type="email" {...register("companyEmail")} placeholder="contact@acme.com" />
-                            {errors.companyEmail && <p className="text-xs text-red-500">{errors.companyEmail.message}</p>}
-                        </div>
+                <StepIndicator current={step} total={3} />
 
-                        <div className="space-y-2">
-                            <Label htmlFor="companyAddress">Address (Optional)</Label>
-                            <Input id="companyAddress" {...register("companyAddress")} placeholder="123 Main St" />
-                        </div>
+                {/* Step 0: Welcome */}
+                {step === 0 && (
+                    <Card>
+                        <CardHeader className="text-center">
+                            <CardTitle className="text-2xl">Welcome to InvoiceSlayer</CardTitle>
+                            <CardDescription>
+                                Let's get you set up in just a couple of steps.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-3 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                                    <span>Create and send professional invoices & quotes</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                                    <span>Track payments, expenses, and projects</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                                    <span>Accept online payments via Stripe</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                                    <span>AI-powered invoice generation</span>
+                                </div>
+                            </div>
+                        </CardContent>
+                        <CardFooter>
+                            <InteractiveButton className="w-full" onClick={() => setStep(1)}>
+                                Get Started <ArrowRight className="ml-2 w-4 h-4" />
+                            </InteractiveButton>
+                        </CardFooter>
+                    </Card>
+                )}
 
-                        <div className="space-y-2">
-                            <Label htmlFor="companyPhone">Phone (Optional)</Label>
-                            <Input id="companyPhone" {...register("companyPhone")} placeholder="+1 (555) 000-0000" />
-                        </div>
+                {/* Step 1: Company Details */}
+                {step === 1 && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Your Company Details</CardTitle>
+                            <CardDescription>
+                                This information will appear on your invoices and quotes.
+                            </CardDescription>
+                        </CardHeader>
+                        <form onSubmit={handleSubmit(onSubmit)}>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="companyName">Company Name</Label>
+                                    <Input id="companyName" {...register("companyName")} placeholder="Acme Inc." />
+                                    {errors.companyName && <p className="text-xs text-red-500">{errors.companyName.message}</p>}
+                                </div>
 
-                        <div className="space-y-2">
-                            <Label>Currency</Label>
-                            <Select onValueChange={(value) => setValue("currency", value)} defaultValue="USD">
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select currency" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="USD">USD ($)</SelectItem>
-                                    <SelectItem value="EUR">EUR (€)</SelectItem>
-                                    <SelectItem value="GBP">GBP (£)</SelectItem>
-                                    <SelectItem value="CAD">CAD ($)</SelectItem>
-                                    <SelectItem value="AUD">AUD ($)</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            {errors.currency && <p className="text-xs text-red-500">{errors.currency.message}</p>}
-                        </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="companyEmail">Company Email</Label>
+                                    <Input id="companyEmail" type="email" {...register("companyEmail")} placeholder="contact@acme.com" />
+                                    {errors.companyEmail && <p className="text-xs text-red-500">{errors.companyEmail.message}</p>}
+                                </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="defaultTaxRate">Default Tax Rate (%)</Label>
-                            <Input
-                                id="defaultTaxRate"
-                                type="number"
-                                step="0.01"
-                                {...register("defaultTaxRate", { valueAsNumber: true })}
-                                placeholder="13"
-                            />
-                            {errors.defaultTaxRate && <p className="text-xs text-red-500">{errors.defaultTaxRate.message}</p>}
-                        </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="companyAddress">
+                                            Address <span className="text-muted-foreground text-xs">(optional)</span>
+                                        </Label>
+                                        <Input id="companyAddress" {...register("companyAddress")} placeholder="123 Main St" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="companyPhone">
+                                            Phone <span className="text-muted-foreground text-xs">(optional)</span>
+                                        </Label>
+                                        <Input id="companyPhone" {...register("companyPhone")} placeholder="+1 (555) 000-0000" />
+                                    </div>
+                                </div>
 
-                        {/* Hidden fields for templates to ensure they are registered and submitted */}
-                        <input type="hidden" {...register("invoiceTemplate")} />
-                        <input type="hidden" {...register("quoteTemplate")} />
-                    </CardContent>
-                    <CardFooter>
-                        <Button type="submit" className="w-full" disabled={isSubmitting}>
-                            {isSubmitting ? "Saving..." : "Get Started"}
-                        </Button>
-                    </CardFooter>
-                </form>
-            </Card>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Currency</Label>
+                                        <Select onValueChange={(value) => setValue("currency", value)} defaultValue="USD">
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select currency" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="USD">USD ($)</SelectItem>
+                                                <SelectItem value="EUR">EUR (€)</SelectItem>
+                                                <SelectItem value="GBP">GBP (£)</SelectItem>
+                                                <SelectItem value="CAD">CAD ($)</SelectItem>
+                                                <SelectItem value="AUD">AUD ($)</SelectItem>
+                                                <SelectItem value="JPY">JPY (¥)</SelectItem>
+                                                <SelectItem value="CHF">CHF (Fr)</SelectItem>
+                                                <SelectItem value="INR">INR (₹)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.currency && <p className="text-xs text-red-500">{errors.currency.message}</p>}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="defaultTaxRate">Default Tax Rate (%)</Label>
+                                        <Input
+                                            id="defaultTaxRate"
+                                            type="number"
+                                            step="0.01"
+                                            {...register("defaultTaxRate", { valueAsNumber: true })}
+                                            placeholder="13"
+                                        />
+                                        {errors.defaultTaxRate && <p className="text-xs text-red-500">{errors.defaultTaxRate.message}</p>}
+                                    </div>
+                                </div>
+
+                                <input type="hidden" {...register("invoiceTemplate")} />
+                                <input type="hidden" {...register("quoteTemplate")} />
+                            </CardContent>
+                            <CardFooter className="flex gap-3">
+                                <InteractiveButton type="button" variant="outline" onClick={() => setStep(0)} className="flex-1">
+                                    Back
+                                </InteractiveButton>
+                                <InteractiveButton type="submit" className="flex-1" disabled={isSubmitting} loading={isSubmitting}>
+                                    {!isSubmitting && "Save & Continue"}
+                                    {!isSubmitting && <ArrowRight className="ml-2 w-4 h-4" />}
+                                </InteractiveButton>
+                            </CardFooter>
+                        </form>
+                    </Card>
+                )}
+
+                {/* Step 2: Setup Checklist */}
+                {step === 2 && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>🎉 You're all set!</CardTitle>
+                            <CardDescription>
+                                Everything below is optional. You can start invoicing right away, or configure integrations whenever you're ready.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <SetupChecklist />
+                        </CardContent>
+                        <CardFooter>
+                            <InteractiveButton className="w-full" onClick={() => router.push("/")}>
+                                Go to Dashboard <ArrowRight className="ml-2 w-4 h-4" />
+                            </InteractiveButton>
+                        </CardFooter>
+                    </Card>
+                )}
+            </div>
         </div>
     );
 }
