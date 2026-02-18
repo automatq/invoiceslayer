@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Image from "next/image";
 import { CheckCircle2, ArrowRight, Server, Cloud, Mail, CreditCard, Bot, Zap, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { InteractiveButton } from "@/components/ui/interactive-button";
 
 const SettingsSchema = z.object({
     companyName: z.string().min(1, "Company name is required"),
@@ -40,10 +41,10 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
                 <div key={i} className="flex items-center gap-2">
                     <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${i < current
-                                ? "bg-green-500 text-white"
-                                : i === current
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-muted text-muted-foreground"
+                            ? "bg-green-500 text-white"
+                            : i === current
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted text-muted-foreground"
                             }`}
                     >
                         {i < current ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
@@ -170,8 +171,8 @@ function SetupChecklist({ isCloud }: { isCloud: boolean }) {
                     key={i}
                     href={item.href}
                     className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${item.done
-                            ? "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 cursor-default pointer-events-none"
-                            : "border-border hover:border-primary/40 hover:bg-muted/50 cursor-pointer"
+                        ? "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 cursor-default pointer-events-none"
+                        : "border-border hover:border-primary/40 hover:bg-muted/50 cursor-pointer"
                         }`}
                 >
                     <div className="mt-0.5 shrink-0">{item.icon}</div>
@@ -180,10 +181,10 @@ function SetupChecklist({ isCloud }: { isCloud: boolean }) {
                             <p className="text-sm font-medium">{item.title}</p>
                             {item.badge && (
                                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${item.badge === "Required"
-                                        ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
-                                        : item.badge === "Recommended"
-                                            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300"
-                                            : "bg-muted text-muted-foreground"
+                                    ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
+                                    : item.badge === "Recommended"
+                                        ? "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300"
+                                        : "bg-muted text-muted-foreground"
                                     }`}>
                                     {item.badge}
                                 </span>
@@ -299,9 +300,9 @@ export function OnboardingWizard({ isCloudDeployment }: OnboardingWizardProps) {
                             </div>
                         </CardContent>
                         <CardFooter>
-                            <Button className="w-full" onClick={() => setStep(1)}>
+                            <InteractiveButton className="w-full" onClick={() => setStep(1)}>
                                 Get Started <ArrowRight className="ml-2 w-4 h-4" />
-                            </Button>
+                            </InteractiveButton>
                         </CardFooter>
                     </Card>
                 )}
@@ -384,10 +385,10 @@ export function OnboardingWizard({ isCloudDeployment }: OnboardingWizardProps) {
                                 <Button type="button" variant="outline" onClick={() => setStep(0)} className="flex-1">
                                     Back
                                 </Button>
-                                <Button type="submit" className="flex-1" disabled={isSubmitting}>
-                                    {isSubmitting ? "Saving..." : "Save & Continue"}
+                                <InteractiveButton type="submit" className="flex-1" disabled={isSubmitting} loading={isSubmitting}>
+                                    {!isSubmitting && "Save & Continue"}
                                     {!isSubmitting && <ArrowRight className="ml-2 w-4 h-4" />}
-                                </Button>
+                                </InteractiveButton>
                             </CardFooter>
                         </form>
                     </Card>
@@ -408,9 +409,9 @@ export function OnboardingWizard({ isCloudDeployment }: OnboardingWizardProps) {
                             <SetupChecklist isCloud={isCloudDeployment} />
                         </CardContent>
                         <CardFooter>
-                            <Button className="w-full" onClick={() => router.push("/")}>
+                            <InteractiveButton className="w-full" onClick={() => router.push("/")}>
                                 Go to Dashboard <ArrowRight className="ml-2 w-4 h-4" />
-                            </Button>
+                            </InteractiveButton>
                         </CardFooter>
                     </Card>
                 )}
