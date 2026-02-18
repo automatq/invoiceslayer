@@ -382,9 +382,9 @@ export function OnboardingWizard({ isCloudDeployment }: OnboardingWizardProps) {
                                 <input type="hidden" {...register("quoteTemplate")} />
                             </CardContent>
                             <CardFooter className="flex gap-3">
-                                <Button type="button" variant="outline" onClick={() => setStep(0)} className="flex-1">
+                                <InteractiveButton type="button" variant="outline" onClick={() => setStep(0)} className="flex-1">
                                     Back
-                                </Button>
+                                </InteractiveButton>
                                 <InteractiveButton type="submit" className="flex-1" disabled={isSubmitting} loading={isSubmitting}>
                                     {!isSubmitting && "Save & Continue"}
                                     {!isSubmitting && <ArrowRight className="ml-2 w-4 h-4" />}
