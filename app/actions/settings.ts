@@ -38,11 +38,40 @@ export type SettingsFormValues = {
 export async function createSettings(data: SettingsFormValues) {
     const { userId } = await getRequiredSession();
     try {
+        console.log("Creating settings for user:", userId, "data:", data);
+        
+        // Ensure required fields are present
+        if (!data.companyName || !data.companyEmail) {
+            return { success: false, message: "Company name and email are required" };
+        }
+        
+        // Convert empty strings to null for optional fields
+        const createData = {
+            companyName: data.companyName,
+            companyEmail: data.companyEmail,
+            companyAddress: data.companyAddress || null,
+            companyPhone: data.companyPhone || null,
+            companyLogo: data.companyLogo || null,
+            companyWebsite: data.companyWebsite || null,
+            companyTaxId: data.companyTaxId || null,
+            paymentInstructions: data.paymentInstructions || null,
+            currency: data.currency || "USD",
+            defaultTaxRate: data.defaultTaxRate ?? 13,
+            invoiceTemplate: data.invoiceTemplate || "modern",
+            quoteTemplate: data.quoteTemplate || "modern",
+            resendApiKey: data.resendApiKey || null,
+            stripePublishableKey: data.stripePublishableKey || null,
+            stripeSecretKey: data.stripeSecretKey || null,
+            cryptoWalletAddress: data.cryptoWalletAddress || null,
+            localAiUrl: data.localAiUrl || "http://localhost:11434/v1",
+            localAiModel: data.localAiModel || "llama3",
+        };
+        
         await prisma.setting.upsert({
             where: { userId },
-            update: data,
+            update: createData,
             create: {
-                ...data,
+                ...createData,
                 userId
             }
         });
@@ -53,9 +82,9 @@ export async function createSettings(data: SettingsFormValues) {
             userId
         });
         return { success: true };
-    } catch (e) {
-        console.error(e);
-        return { success: false, message: "Failed to save settings" };
+    } catch (e: any) {
+        console.error("Settings save error:", e);
+        return { success: false, message: e.message || "Failed to save settings" };
     }
 }
 
