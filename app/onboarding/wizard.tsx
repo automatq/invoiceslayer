@@ -367,8 +367,15 @@ export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabl
     const onSubmit = async (data: SettingsFormValues) => {
         setIsSubmitting(true);
         try {
-            console.log("Submitting settings:", data);
-            const result = await createSettings(data);
+            // Convert empty strings to undefined for optional fields
+            const cleanedData = {
+                ...data,
+                companyAddress: data.companyAddress?.trim() || undefined,
+                companyPhone: data.companyPhone?.trim() || undefined,
+                defaultTaxRate: Number(data.defaultTaxRate) || 0,
+            };
+            console.log("Submitting settings:", cleanedData);
+            const result = await createSettings(cleanedData);
             if (result.success) {
                 toast.success("Settings saved successfully!");
                 setStep(3);
