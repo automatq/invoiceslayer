@@ -291,35 +291,20 @@ export function OnboardingWizard({ isCloudDeployment }: OnboardingWizardProps) {
 
                             <div className="space-y-4 mb-10">
                                 <div className="flex items-center gap-4 group/item">
-                                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center shrink-0 border border-white/10 transition-all group-hover/item:bg-primary/20 group-hover/item:border-primary/50">
-                                        <CheckCircle2 className="w-6 h-6 text-green-500" strokeWidth={3} />
-                                    </div>
-                                    <div>
-                                        <span className="font-black italic uppercase tracking-tight text-white/90 text-lg">Professional Templates</span>
-                                        <p className="text-xs text-white/40 font-bold uppercase tracking-widest">Invoices & Quotes</p>
-                                    </div>
+                                    <CheckCircle2 className="w-6 h-6 text-green-500 shrink-0" />
+                                    <span className="font-bold italic text-white/90">Professional invoice & quote templates</span>
                                 </div>
-                                <div className="flex items-center gap-4 group/item text-white/90">
-                                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center shrink-0 border border-white/10 transition-all group-hover/item:bg-primary/20 group-hover/item:border-primary/50">
-                                        <CheckCircle2 className="w-6 h-6 text-green-500" strokeWidth={3} />
-                                    </div>
-                                    <div>
-                                        <span className="font-black italic uppercase tracking-tight text-white/90 text-lg">Tax & Currency</span>
-                                        <p className="text-xs text-white/40 font-bold uppercase tracking-widest">Automatic Management</p>
-                                    </div>
+                                <div className="flex items-center gap-4 group/item">
+                                    <CheckCircle2 className="w-6 h-6 text-green-500 shrink-0" />
+                                    <span className="font-bold italic text-white/90">Automatic tax & currency management</span>
                                 </div>
-                                <div className="flex items-center gap-4 group/item text-white/90">
-                                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center shrink-0 border border-white/10 transition-all group-hover/item:bg-primary/20 group-hover/item:border-primary/50">
-                                        <CheckCircle2 className="w-6 h-6 text-green-500" strokeWidth={3} />
-                                    </div>
-                                    <div>
-                                        <span className="font-black italic uppercase tracking-tight text-white/90 text-lg">
-                                            {isCloudDeployment
-                                                ? "AI-powered generation"
-                                                : "Local AI (Ollama)"}
-                                        </span>
-                                        <p className="text-xs text-white/40 font-bold uppercase tracking-widest">Smart Automation</p>
-                                    </div>
+                                <div className="flex items-center gap-4 group/item">
+                                    <CheckCircle2 className="w-6 h-6 text-green-500 shrink-0" />
+                                    <span className="font-bold italic text-white/90">
+                                        {isCloudDeployment
+                                            ? "AI-powered invoice generation"
+                                            : "AI-powered generation via local Ollama"}
+                                    </span>
                                 </div>
                             </div>
 
