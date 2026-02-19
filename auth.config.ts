@@ -31,6 +31,7 @@ export default {
             const isPublicRoute =
                 nextUrl.pathname.startsWith("/login") ||
                 nextUrl.pathname.startsWith("/register") ||
+                nextUrl.pathname.startsWith("/onboarding") ||
                 nextUrl.pathname.startsWith("/p/") || // Public portal routes
                 nextUrl.pathname.startsWith("/api/webhooks") ||
                 nextUrl.pathname.startsWith("/api/docs");
