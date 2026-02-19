@@ -10,6 +10,62 @@ datasource db {
   provider = "sqlite"
 }
 
+enum UserRole {
+  OWNER
+  ADMIN
+  ACCOUNTANT
+  SALES
+  VIEWER
+}
+
+model Team {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  logo        String?
+  settings    Json?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  members     TeamMember[]
+  invitations Invitation[]
+  clients     Client[]
+  invoices    Invoice[]
+  quotes      Quote[]
+  projects    Project[]
+  expenses    Expense[]
+  recurring   RecurringInvoice[]
+  pipelines   Pipeline[]
+  deals       Deal[]
+  settingsTeam Setting[]
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      UserRole @default(VIEWER)
+  joinedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teamId, userId])
+}
+
+model Invitation {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  email     String
+  role      UserRole @default(VIEWER)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  accepted  Boolean  @default(false)
+
+  @@unique([teamId, email])
+}
+
 model User {
   id              String             @id @default(cuid())
   name            String?
@@ -31,6 +87,7 @@ model User {
   invoiceTemplate InvoiceTemplate?
   pipelines       Pipeline[]
   deals           Deal[]
+  teams           TeamMember[]
   createdAt       DateTime           @default(now())
 
   updatedAt DateTime @updatedAt
@@ -81,6 +138,8 @@ model Client {
   photo             String?
   userId            String
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId            String?
+  team              Team?              @relation(fields: [teamId], references: [id], onDelete: Cascade)
   invoices          Invoice[]
   quotes            Quote[]
   projects          Project[]
@@ -95,6 +154,7 @@ model Client {
   portalToken       String?            @unique
 
   @@unique([userId, email])
+  @@index([teamId])
 }
 
 model Invoice {
@@ -107,6 +167,8 @@ model Invoice {
   client         Client          @relation(fields: [clientId], references: [id])
   userId         String
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId         String?
+  team           Team?           @relation(fields: [teamId], references: [id], onDelete: Cascade)
   items          InvoiceItem[]
   subtotal       Float           @default(0)
   taxTotal       Float           @default(0)
@@ -123,6 +185,7 @@ model Invoice {
   escrowContract EscrowContract?
 
   @@unique([userId, number])
+  @@index([teamId])
 }
 
 model EscrowContract {
@@ -148,6 +211,8 @@ model Quote {
   client     Client      @relation(fields: [clientId], references: [id])
   userId     String
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId     String?
+  team       Team?       @relation(fields: [teamId], references: [id], onDelete: Cascade)
   items      QuoteItem[]
   subtotal   Float       @default(0)
   taxTotal   Float       @default(0)
@@ -161,6 +226,7 @@ model Quote {
   updatedAt  DateTime    @updatedAt
 
   @@unique([userId, number])
+  @@index([teamId])
 }
 
 model InvoiceItem {
@@ -204,6 +270,8 @@ model RecurringInvoice {
   client            Client   @relation(fields: [clientId], references: [id])
   userId            String
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId            String?
+  team              Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   items             String // JSON string of items
   frequency         String // WEEKLY, MONTHLY, QUARTERLY, YEARLY
   nextRunDate       DateTime
@@ -213,12 +281,16 @@ model RecurringInvoice {
   notes             String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  @@index([teamId])
 }
 
 model Setting {
   id                   String   @id @default(cuid())
   userId               String
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId               String?
+  team                 Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   companyName          String
   companyEmail         String
   companyAddress       String?
@@ -242,6 +314,7 @@ model Setting {
   updatedAt            DateTime @updatedAt
 
   @@unique([userId])
+  @@index([teamId])
 }
 
 model Notification {
@@ -269,8 +342,12 @@ model Expense {
   project     Project? @relation(fields: [projectId], references: [id])
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId      String?
+  team        Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([teamId])
 }
 
 model Project {
@@ -282,11 +359,15 @@ model Project {
   client      Client    @relation(fields: [clientId], references: [id])
   userId      String
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId      String?
+  team        Team?     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   invoices    Invoice[]
   quotes      Quote[]
   expenses    Expense[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@index([teamId])
 }
 
 model InvoiceTemplate {
@@ -311,6 +392,8 @@ model Pipeline {
   name        String
   userId      String
   user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId      String?
+  team        Team?           @relation(fields: [teamId], references: [id], onDelete: Cascade)
   stages      PipelineStage[]
   deals       Deal[]
   isDefault   Boolean         @default(false)
@@ -318,6 +401,7 @@ model Pipeline {
   updatedAt   DateTime        @updatedAt
 
   @@unique([userId, name])
+  @@index([teamId])
 }
 
 model PipelineStage {
@@ -348,6 +432,8 @@ model Deal {
   client        Client        @relation(fields: [clientId], references: [id])
   userId        String
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId        String?
+  team          Team?         @relation(fields: [teamId], references: [id], onDelete: Cascade)
   status        String        @default("OPEN") // OPEN, WON, LOST, STALE
   source        String?
   priority      String        @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
@@ -359,6 +445,8 @@ model Deal {
   customFields  String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+
+  @@index([teamId])
 }
 
 model DealActivity {
