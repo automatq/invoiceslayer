@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
 import { Montserrat, Playfair_Display, Lato, Roboto_Slab, Lora } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { Toaster } from "@/components/ui/sonner";
-import { CommandPalette } from "@/components/CommandPalette";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -41,32 +37,17 @@ export const metadata: Metadata = {
   description: "Professional invoicing application",
 };
 
-import { SessionProvider } from "next-auth/react";
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html suppressHydrationWarning>
       <body
         className={`${montserrat.variable} ${playfair.variable} ${lato.variable} ${robotoSlab.variable} ${lora.variable} antialiased`}
       >
-        <SessionProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <TooltipProvider>
-              {children}
-              <Toaster />
-              <CommandPalette />
-            </TooltipProvider>
-          </ThemeProvider>
-        </SessionProvider>
+        {children}
       </body>
     </html>
   );

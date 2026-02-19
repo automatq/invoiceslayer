@@ -1,8 +1,13 @@
 import NextAuth from "next-auth";
 import authConfig from "./auth.config";
 import { NextResponse } from "next/server";
+import createMiddleware from 'next-intl/middleware';
+import { routing } from './i18n/routing';
 
 const { auth } = NextAuth(authConfig);
+
+// Create i18n middleware
+const intlMiddleware = createMiddleware(routing);
 
 const SECURITY_HEADERS = {
     "X-Frame-Options": "DENY",
@@ -30,6 +35,15 @@ export default auth((req) => {
     const { pathname } = req.nextUrl;
     const isLoggedIn = !!req.auth;
 
+    // 0. Apply i18n middleware first (handles locale routing)
+    const intlResponse = intlMiddleware(req);
+    if (intlResponse) {
+        // If i18n middleware returns a redirect or rewrite, return it
+        if (intlResponse.status !== 200) {
+            return intlResponse;
+        }
+    }
+
     // 1. Cron protection
     if (CRON_ROUTES.some((route) => pathname.startsWith(route))) {
         const cronSecret = process.env.CRON_SECRET;
@@ -41,10 +55,10 @@ export default auth((req) => {
     }
 
     // 2. Route protection
-    const isAuthPage = AUTH_PAGES.some((page) => pathname.startsWith(page));
+    const isAuthPage = AUTH_PAGES.some((page) => pathname.includes(page));
     const isAuthApi = pathname.startsWith("/api/auth");
     const isPublicPortalRoute = PUBLIC_PORTAL_ROUTES.some((route) => pathname.startsWith(route));
-    const isPublicAppRoute = PUBLIC_APP_ROUTES.some((route) => pathname.startsWith(route));
+    const isPublicAppRoute = PUBLIC_APP_ROUTES.some((route) => pathname.includes(route));
 
     // Allow auth APIs to pass through
     if (isAuthApi) return NextResponse.next();
@@ -63,7 +77,7 @@ export default auth((req) => {
     }
 
     // 3. Security Headers
-    const response = NextResponse.next();
+    const response = intlResponse || NextResponse.next();
     Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
         response.headers.set(key, value);
     });
