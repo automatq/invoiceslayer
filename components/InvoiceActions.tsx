@@ -3,6 +3,7 @@
 import { updateInvoiceStatus, deleteInvoice } from "@/app/actions/invoices";
 import { sendInvoiceEmail } from "@/app/actions/email";
 import { getSettings } from "@/app/actions/settings";
+import { getDocumentSignature } from "@/app/actions/signatures";
 import { generateInvoicePDF } from "@/lib/generatePdf";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -46,7 +47,8 @@ export function InvoiceActions({ invoice }: { invoice: Invoice }) {
 
     const handleGeneratePDF = async () => {
         const settings = await getSettings();
-        generateInvoicePDF(invoice, settings);
+        const signature = await getDocumentSignature(invoice.id, "INVOICE");
+        generateInvoicePDF(invoice, settings, signature);
     };
 
     const handleDelete = async () => {

@@ -20,7 +20,10 @@ export type AuditResource =
     | "RecurringInvoice"
     | "Settings"
     | "DataExport"
-    | "System";
+    | "System"
+    | "Pipeline"
+    | "Deal"
+    | "DocumentSignature";
 
 interface AuditEventOptions {
     action: AuditAction;

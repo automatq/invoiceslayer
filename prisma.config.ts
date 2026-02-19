@@ -2,10 +2,21 @@ import { defineConfig } from "@prisma/config";
 import "dotenv/config";
 
 const getDatabaseUrl = () => {
-    if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
-        return `${process.env.TURSO_DATABASE_URL}?authToken=${process.env.TURSO_AUTH_TOKEN}`;
+    // Priority 1: Explicitly provided DATABASE_URL if it's a local file
+    if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith("file:")) {
+        return process.env.DATABASE_URL;
     }
-    return process.env.DATABASE_URL ?? "file:./dev.db";
+
+    const tursoUrl = process.env.TURSO_DATABASE_URL;
+    const tursoToken = process.env.TURSO_AUTH_TOKEN;
+
+    if (tursoUrl && tursoToken) {
+        // Strip any existing protocol if present to avoid double-prefixing
+        const cleanUrl = tursoUrl.replace(/^(libsql|https|http):\/\//, "");
+        return `libsql://${cleanUrl}?authToken=${tursoToken}`;
+    }
+
+    return process.env.DATABASE_URL ?? "file:./prisma/dev.db";
 };
 
 export default defineConfig({

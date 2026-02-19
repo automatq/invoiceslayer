@@ -218,3 +218,238 @@ export async function getDashboardMetrics(year: number = new Date().getFullYear(
         overdueInvoices,
     };
 }
+
+// Pipeline CRM Reports
+export async function getPipelineMetrics() {
+    const { userId } = await getRequiredSession();
+
+    const pipelines = await prisma.pipeline.findMany({
+        where: { userId },
+        include: {
+            stages: {
+                include: {
+                    deals: true,
+                },
+            },
+        },
+    });
+
+    let totalPipelineValue = 0;
+    let weightedForecast = 0;
+    let totalDeals = 0;
+    let openDeals = 0;
+    let wonDeals = 0;
+    let lostDeals = 0;
+
+    pipelines.forEach((pipeline: any) => {
+        pipeline.stages.forEach((stage: any) => {
+            stage.deals.forEach((deal: any) => {
+                totalPipelineValue += deal.value;
+                weightedForecast += deal.value * (stage.probability / 100);
+                totalDeals++;
+                if (deal.status === "OPEN") openDeals++;
+                if (deal.status === "WON") wonDeals++;
+                if (deal.status === "LOST") lostDeals++;
+            });
+        });
+    });
+
+    const winRate = totalDeals > 0 ? (wonDeals / (wonDeals + lostDeals)) * 100 : 0;
+
+    return {
+        totalPipelineValue,
+        weightedForecast,
+        totalDeals,
+        openDeals,
+        wonDeals,
+        lostDeals,
+        winRate: parseFloat(winRate.toFixed(1)),
+        pipelineCount: pipelines.length,
+    };
+}
+
+export async function getDealsByStage() {
+    const { userId } = await getRequiredSession();
+
+    const stages = await prisma.pipelineStage.findMany({
+        where: { pipeline: { userId } },
+        include: {
+            deals: true,
+            pipeline: true,
+        },
+        orderBy: { order: "asc" },
+    });
+
+    return stages.map((stage: any) => ({
+        stageId: stage.id,
+        stageName: stage.name,
+        color: stage.color,
+        probability: stage.probability,
+        dealCount: stage.deals.length,
+        totalValue: stage.deals.reduce((sum: number, d: any) => sum + d.value, 0),
+        weightedValue: stage.deals.reduce((sum: number, d: any) => sum + d.value, 0) * (stage.probability / 100),
+    }));
+}
+
+export async function getPipelineForecastByMonth(year: number = new Date().getFullYear()) {
+    const { userId } = await getRequiredSession();
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year + 1, 0, 1);
+
+    const monthlyData = Array.from({ length: 12 }, (_, i) => ({
+        name: new Date(year, i).toLocaleString('default', { month: 'short' }),
+        pipelineValue: 0,
+        weightedForecast: 0,
+        expectedClose: 0,
+    }));
+
+    const deals = await prisma.deal.findMany({
+        where: {
+            userId,
+            expectedClose: { gte: startDate, lt: endDate },
+        },
+        include: {
+            stage: true,
+        },
+    });
+
+    deals.forEach((deal: any) => {
+        if (deal.expectedClose) {
+            const month = deal.expectedClose.getMonth();
+            monthlyData[month].pipelineValue += deal.value;
+            monthlyData[month].weightedForecast += deal.value * (deal.stage.probability / 100);
+            monthlyData[month].expectedClose += 1;
+        }
+    });
+
+    return monthlyData;
+}
+
+export async function getConversionRates() {
+    const { userId } = await getRequiredSession();
+
+    const stages = await prisma.pipelineStage.findMany({
+        where: { pipeline: { userId } },
+        include: {
+            deals: {
+                select: { id: true, status: true },
+            },
+        },
+        orderBy: { order: "asc" },
+    });
+
+    const conversionData = [];
+    for (let i = 0; i < stages.length - 1; i++) {
+        const currentStage = stages[i];
+        const nextStage = stages[i + 1];
+        
+        const dealsInCurrent = currentStage.deals.length;
+        const dealsInNext = nextStage.deals.length;
+        
+        const conversionRate = dealsInCurrent > 0 
+            ? (dealsInNext / dealsInCurrent) * 100 
+            : 0;
+
+        conversionData.push({
+            fromStage: currentStage.name,
+            toStage: nextStage.name,
+            fromCount: dealsInCurrent,
+            toCount: dealsInNext,
+            conversionRate: parseFloat(conversionRate.toFixed(1)),
+        });
+    }
+
+    return conversionData;
+}
+
+export async function getWinLossAnalysis(year: number = new Date().getFullYear()) {
+    const { userId } = await getRequiredSession();
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year + 1, 0, 1);
+
+    const wonDeals = await prisma.deal.findMany({
+        where: {
+            userId,
+            status: "WON",
+            updatedAt: { gte: startDate, lt: endDate },
+        },
+        include: { stage: true },
+    });
+
+    const lostDeals = await prisma.deal.findMany({
+        where: {
+            userId,
+            status: "LOST",
+            updatedAt: { gte: startDate, lt: endDate },
+        },
+        include: { stage: true },
+    });
+
+    const wonValue = wonDeals.reduce((sum: number, d: any) => sum + d.value, 0);
+    const lostValue = lostDeals.reduce((sum: number, d: any) => sum + d.value, 0);
+    const totalClosed = wonDeals.length + lostDeals.length;
+
+    return {
+        won: {
+            count: wonDeals.length,
+            value: wonValue,
+            avgValue: wonDeals.length > 0 ? wonValue / wonDeals.length : 0,
+        },
+        lost: {
+            count: lostDeals.length,
+            value: lostValue,
+            avgValue: lostDeals.length > 0 ? lostValue / lostDeals.length : 0,
+        },
+        winRate: totalClosed > 0 ? parseFloat(((wonDeals.length / totalClosed) * 100).toFixed(1)) : 0,
+        totalClosedValue: wonValue + lostValue,
+    };
+}
+
+// Get combined revenue data: actual invoices + pipeline forecast
+export async function getCombinedRevenueData(year: number = new Date().getFullYear()) {
+    const { userId } = await getRequiredSession();
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year + 1, 0, 1);
+
+    const monthlyData = Array.from({ length: 12 }, (_, i) => ({
+        month: new Date(year, i).toLocaleString('default', { month: 'short' }),
+        actualRevenue: 0,
+        forecastRevenue: 0,
+        pipelineValue: 0,
+    }));
+
+    // Get actual invoice revenue (paid amounts)
+    const payments = await prisma.payment.findMany({
+        where: {
+            invoice: { userId },
+            date: { gte: startDate, lt: endDate }
+        },
+        select: { date: true, amount: true }
+    });
+
+    payments.forEach((payment: any) => {
+        const month = payment.date.getMonth();
+        monthlyData[month].actualRevenue += payment.amount;
+    });
+
+    // Get pipeline data - deals expected to close by month
+    const deals = await prisma.deal.findMany({
+        where: {
+            userId,
+            status: { in: ["OPEN", "WON"] },
+            expectedClose: { gte: startDate, lt: endDate },
+        },
+        include: { stage: true },
+    });
+
+    deals.forEach((deal: any) => {
+        if (deal.expectedClose) {
+            const month = deal.expectedClose.getMonth();
+            const weightedValue = deal.value * (deal.stage.probability / 100);
+            monthlyData[month].forecastRevenue += weightedValue;
+            monthlyData[month].pipelineValue += deal.value;
+        }
+    });
+
+    return monthlyData;
+}

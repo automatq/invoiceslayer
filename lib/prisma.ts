@@ -6,21 +6,19 @@ const globalForPrisma = globalThis as unknown as {
     prisma: PrismaClient | undefined;
 };
 
-// Check for Turso configuration
+const isProduction = process.env.NODE_ENV === "production";
 const tursoUrl = process.env.TURSO_DATABASE_URL;
 const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;
 
 let adapter;
 
-if (tursoUrl && tursoUrl.includes("turso.io")) {
+// Only use Turso in production or if explicitly forced
+if (isProduction && tursoUrl && tursoUrl.includes("turso.io")) {
     adapter = new PrismaLibSql({
         url: tursoUrl,
         authToken: tursoAuthToken,
     });
 } else {
-    if (!globalForPrisma.prisma) {
-        console.log("📂 Using Local SQLite Database");
-    }
     const databaseUrl = process.env.DATABASE_URL?.replace("file:", "") ?? "prisma/dev.db";
     adapter = new PrismaBetterSqlite3({ url: databaseUrl });
 }

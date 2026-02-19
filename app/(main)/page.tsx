@@ -11,8 +11,8 @@ import { getInvoices } from "@/app/actions/invoices";
 import { getClients } from "@/app/actions/clients";
 import { getQuotes } from "@/app/actions/quotes";
 import { getExpenses } from "@/app/actions/expenses";
-import { getRevenueByMonth, getDashboardMetrics } from "@/app/actions/reports";
-import { DollarSign, Clock, TriangleAlert, Wallet, TrendingUp, Repeat } from "lucide-react";
+import { getRevenueByMonth, getDashboardMetrics, getPipelineMetrics, getPipelineForecastByMonth } from "@/app/actions/reports";
+import { DollarSign, Clock, TriangleAlert, Wallet, TrendingUp, Repeat, Target, BarChart3, Percent, Layers } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -32,16 +32,19 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const basis = (rawBasis === "cash") ? "cash" : "accrual";
   const currentYear = new Date().getFullYear();
 
-  const [invoices, clients, quotes, expenses, revenueData, metrics] = await Promise.all([
+  const [invoices, clients, quotes, expenses, revenueData, metrics, pipelineMetrics, pipelineForecast] = await Promise.all([
     getInvoices(),
     getClients(),
     getQuotes(),
     getExpenses(),
     getRevenueByMonth(currentYear, basis as "accrual" | "cash"),
-    getDashboardMetrics(currentYear, basis as "accrual" | "cash")
+    getDashboardMetrics(currentYear, basis as "accrual" | "cash"),
+    getPipelineMetrics(),
+    getPipelineForecastByMonth(currentYear)
   ]);
 
   const { totalRevenue, projectedRevenue, totalExpenses, netProfit, pendingInvoices, overdueInvoices } = metrics;
+  const { totalPipelineValue, weightedForecast, openDeals, winRate } = pipelineMetrics;
 
   // Recent Sales Data (Paid Invoices)
   const recentSales = invoices
@@ -55,7 +58,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       fallback: inv.client.name.substring(0, 2).toUpperCase(),
     }));
 
-  // Merge Revenue Data with Quotes Data
+  // Merge Revenue Data with Quotes and Pipeline Data
   const overviewData = revenueData.map((monthData: any, index: number) => {
     const monthQuotes = quotes.reduce((acc: number, q: any) => {
       const qDate = new Date(q.date);
@@ -65,11 +68,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       return acc;
     }, 0);
 
+    const monthPipeline = pipelineForecast[index]?.pipelineValue || 0;
+
     return {
       name: monthData.name,
       revenue: monthData.revenue,
       projected: monthData.projected,
       quotes: monthQuotes,
+      pipeline: monthPipeline,
     };
   });
 
@@ -147,6 +153,66 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <div className="text-2xl font-bold">{pendingInvoices}</div>
               <p className="text-xs text-muted-foreground">
                 Action required
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+
+      {/* Pipeline CRM Stats */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Link href="/pipeline" className="gradient-border purple transition-transform hover:scale-[1.02]">
+          <Card className="border-0">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pipeline Value</CardTitle>
+              <Layers className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-600">${totalPipelineValue.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                Total deal value
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/pipeline" className="gradient-border teal transition-transform hover:scale-[1.02]">
+          <Card className="border-0">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Weighted Forecast</CardTitle>
+              <Target className="h-4 w-4 text-teal-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-teal-600">${weightedForecast.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                Probability-adjusted
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/pipeline" className="gradient-border orange transition-transform hover:scale-[1.02]">
+          <Card className="border-0">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Deals</CardTitle>
+              <BarChart3 className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">{openDeals}</div>
+              <p className="text-xs text-muted-foreground">
+                In progress
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/pipeline" className="gradient-border pink transition-transform hover:scale-[1.02]">
+          <Card className="border-0">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
+              <Percent className="h-4 w-4 text-pink-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-pink-600">{winRate}%</div>
+              <p className="text-xs text-muted-foreground">
+                Closed deals
               </p>
             </CardContent>
           </Card>

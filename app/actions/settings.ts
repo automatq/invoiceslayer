@@ -38,24 +38,14 @@ export type SettingsFormValues = {
 export async function createSettings(data: SettingsFormValues) {
     const { userId } = await getRequiredSession();
     try {
-        const existing = await prisma.setting.findUnique({
-            where: { userId }
+        await prisma.setting.upsert({
+            where: { userId },
+            update: data,
+            create: {
+                ...data,
+                userId
+            }
         });
-
-        if (existing) {
-            await prisma.setting.update({
-                where: { userId },
-                data
-            });
-        } else {
-            await prisma.setting.create({
-                data: {
-                    ...data,
-                    userId
-                }
-            });
-        }
-        revalidatePath("/");
         revalidatePath("/settings");
         await logAuditEvent({
             action: "SETTINGS_CHANGE",

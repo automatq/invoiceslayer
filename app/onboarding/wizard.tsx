@@ -24,12 +24,12 @@ import { SocialLogins } from "@/components/SocialLogins";
 const SettingsSchema = z.object({
     companyName: z.string().min(1, "Company name is required"),
     companyEmail: z.string().email("Invalid email address"),
-    companyAddress: z.string().optional(),
-    companyPhone: z.string().optional(),
+    companyAddress: z.string(),
+    companyPhone: z.string(),
     currency: z.string().min(1, "Currency is required"),
     defaultTaxRate: z.number().min(0).max(100),
-    invoiceTemplate: z.string(),
-    quoteTemplate: z.string(),
+    invoiceTemplate: z.string().min(1),
+    quoteTemplate: z.string().min(1),
 });
 
 type SettingsFormValues = z.infer<typeof SettingsSchema>;
@@ -47,25 +47,33 @@ interface OnboardingWizardProps {
     googleEnabled: boolean;
     githubEnabled: boolean;
     initialSession?: Session | null;
+    hasSettings?: boolean;
 }
 
-function StepIndicator({ current, total }: { current: number; total: number }) {
+function StepIndicator({ current, total, getStepLabel, isCloud }: { current: number; total: number; getStepLabel: (i: number) => string; isCloud: boolean }) {
     return (
-        <div className="flex items-center justify-center gap-3 mb-10">
+        <div className="flex items-center justify-center gap-2 sm:gap-4 mb-10">
             {Array.from({ length: total }).map((_, i) => (
                 <div key={i} className="flex items-center">
-                    <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black transition-all duration-500 border-2 ${i < current
-                            ? "bg-green-500 border-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]"
-                            : i === current
-                                ? "bg-white border-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)] scale-110"
-                                : "bg-neutral-800 border-neutral-700 text-neutral-500"
-                            }`}
-                    >
-                        {i < current ? <CheckCircle2 className="w-5 h-5" strokeWidth={3} /> : i + 1}
+                    <div className="flex flex-col items-center gap-2">
+                        <div
+                            className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black transition-all duration-500 border-2 ${i < current
+                                ? "bg-green-500 border-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]"
+                                : i === current
+                                    ? isCloud
+                                        ? "bg-blue-500 border-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.4)] scale-110"
+                                        : "bg-emerald-500 border-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)] scale-110"
+                                    : "bg-neutral-800 border-neutral-700 text-neutral-500"
+                                }`}
+                        >
+                            {i < current ? <CheckCircle2 className="w-5 h-5" strokeWidth={3} /> : i + 1}
+                        </div>
+                        <span className={`text-[10px] font-bold uppercase tracking-wider transition-colors duration-300 ${i === current ? (isCloud ? "text-blue-400" : "text-emerald-400") : i < current ? "text-green-400" : "text-neutral-600"}`}>
+                            {getStepLabel(i)}
+                        </span>
                     </div>
                     {i < total - 1 && (
-                        <div className={`h-[2px] w-8 sm:w-12 transition-all duration-500 mx-1 ${i < current ? "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]" : "bg-neutral-800"}`} />
+                        <div className={`h-[2px] w-6 sm:w-10 transition-all duration-500 mx-2 sm:mx-3 ${i < current ? "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]" : "bg-neutral-800"}`} />
                     )}
                 </div>
             ))}
@@ -220,20 +228,77 @@ function SetupChecklist({ isCloud }: { isCloud: boolean }) {
     );
 }
 
-export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabled, initialSession }: OnboardingWizardProps) {
+export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabled, initialSession, hasSettings }: OnboardingWizardProps) {
     const router = useRouter();
     const { data: session, status } = useSession();
-    const [step, setStep] = useState(0);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
+    // Use sessionStorage to persist step across refreshes during the onboarding process
+    // Steps: 0 = Welcome, 1 = Auth (Docker: Register/Cloud: OAuth), 2 = Business Profile, 3 = Success
+    const [step, setStep] = useState<number>(0);
+
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const isLoggedIn = status === "authenticated" || !!initialSession;
 
-    // Automatically advance if logged in when on Step 1
+    // Determine total steps based on deployment type
+    // Both flows have 3 main steps: Welcome → Auth → Profile → Success (step 3 is completion)
+    const totalSteps = 3;
+
+    // Get step labels based on deployment type
+    const getStepLabel = (stepIndex: number): string => {
+        if (isCloudDeployment) {
+            switch (stepIndex) {
+                case 0: return "Welcome";
+                case 1: return "Connect";
+                case 2: return "Profile";
+                default: return "";
+            }
+        } else {
+            switch (stepIndex) {
+                case 0: return "Welcome";
+                case 1: return "Account";
+                case 2: return "Profile";
+                default: return "";
+            }
+        }
+    };
+
+    // Handle hydration
     useEffect(() => {
+        setMounted(true);
+        const saved = sessionStorage.getItem("onboarding_step");
+        if (saved !== null) {
+            setStep(parseInt(saved, 10));
+        }
+    }, []);
+
+    // Persist step changes
+    useEffect(() => {
+        sessionStorage.setItem("onboarding_step", step.toString());
+    }, [step]);
+
+    // Redirect if onboarding already done (but only if we aren't on the final success step)
+    useEffect(() => {
+        if (hasSettings && step < totalSteps) {
+            router.push("/");
+        }
+    }, [hasSettings, step, router]);
+
+    // Automatically advance from Auth (Step 1) to Profile (Step 2) if login is detected
+    useEffect(() => {
+        if (status === "loading") return;
         if (step === 1 && isLoggedIn) {
             setStep(2);
         }
-    }, [step, isLoggedIn]);
+    }, [step, isLoggedIn, status]);
+
+    // If user is already logged in when landing on onboarding, skip to Profile step
+    useEffect(() => {
+        if (status === "loading") return;
+        if (step === 0 && isLoggedIn && mounted) {
+            setStep(2);
+        }
+    }, [status, isLoggedIn, mounted, step]);
 
     const {
         register,
@@ -248,7 +313,7 @@ export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabl
             companyAddress: "",
             companyPhone: "",
             currency: "USD",
-            defaultTaxRate: 13,
+            defaultTaxRate: 0,
             invoiceTemplate: "modern",
             quoteTemplate: "modern",
         },
@@ -275,7 +340,7 @@ export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabl
                 toast.success("Account created! Please sign in.");
                 // After successful registration, lead to login or auto-signin if possible
                 // For simplicity, we trigger a sign-in directly
-                const loginResult = await signIn("credentials", {
+                await signIn("credentials", {
                     email: data.email,
                     password: data.password,
                     callbackUrl: "/onboarding",
@@ -302,22 +367,28 @@ export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabl
     const onSubmit = async (data: SettingsFormValues) => {
         setIsSubmitting(true);
         try {
+            console.log("Submitting settings:", data);
             const result = await createSettings(data);
             if (result.success) {
                 toast.success("Settings saved successfully!");
                 setStep(3);
+                router.refresh(); // Refresh to update hasSettings server-side
             } else {
                 toast.error("Failed to save settings", {
                     description: result.message || "Please try again.",
                 });
             }
-        } catch (error) {
-            console.error(error);
-            toast.error("An unexpected error occurred");
+        } catch (error: any) {
+            console.error("Submission error:", error);
+            toast.error("An unexpected error occurred", {
+                description: error.message || "Please try again later."
+            });
         } finally {
             setIsSubmitting(false);
         }
     };
+
+    if (!mounted) return null; // Avoid hydration mismatch
 
     const showOAuth = isCloudDeployment && (googleEnabled || githubEnabled);
 
@@ -346,7 +417,7 @@ export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabl
                     </div>
                 </div>
 
-                <StepIndicator current={step} total={4} />
+                <StepIndicator current={step} total={totalSteps} getStepLabel={getStepLabel} isCloud={isCloudDeployment} />
 
                 {/* Step 0: Welcome */}
                 {step === 0 && (
@@ -387,19 +458,21 @@ export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabl
                     </Card>
                 )}
 
-                {/* Step 1: Security / Account Creation */}
+                {/* Step 1: Auth - Cloud: OAuth / Docker: Account Creation */}
                 {step === 1 && (
                     <Card className="border-none shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] bg-neutral-900/80 backdrop-blur-2xl ring-1 ring-white/10 overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-purple-500 via-violet-400 to-purple-500"></div>
+                        <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${isCloudDeployment ? "from-blue-500 via-blue-400 to-blue-500" : "from-purple-500 via-violet-400 to-purple-500"}`}></div>
                         <CardHeader className="pt-10 pb-2">
                             <div className="flex items-center gap-3 mb-2">
-                                <div className="bg-purple-500/20 p-2 rounded-lg">
-                                    <Lock className="w-6 h-6 text-purple-400" />
+                                <div className={`p-2 rounded-lg ${isCloudDeployment ? "bg-blue-500/20" : "bg-purple-500/20"}`}>
+                                    {isCloudDeployment ? <Cloud className="w-6 h-6 text-blue-400" /> : <Lock className="w-6 h-6 text-purple-400" />}
                                 </div>
-                                <CardTitle className="text-4xl font-black italic uppercase tracking-tighter text-white">Security</CardTitle>
+                                <CardTitle className="text-4xl font-black italic uppercase tracking-tighter text-white">
+                                    {isCloudDeployment ? "Connect" : "Account"}
+                                </CardTitle>
                             </div>
                             <CardDescription className="text-base font-bold text-white/50">
-                                {showOAuth ? "Sign in to save your data to the cloud." : "Create your administrative account."}
+                                {isCloudDeployment ? "Sign in with your preferred provider to continue." : "Create your administrative account to get started."}
                             </CardDescription>
                         </CardHeader>
 
@@ -442,19 +515,19 @@ export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabl
                     </Card>
                 )}
 
-                {/* Step 2: Company Details */}
+                {/* Step 2: Business Profile */}
                 {step === 2 && (
                     <Card className="border-none shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] bg-neutral-900/80 backdrop-blur-2xl ring-1 ring-white/10 overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary via-blue-500 to-primary/50"></div>
+                        <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${isCloudDeployment ? "from-blue-500 via-cyan-400 to-blue-500" : "from-emerald-500 via-green-400 to-emerald-500"}`}></div>
                         <CardHeader className="pt-10 pb-2">
                             <div className="flex items-center gap-3 mb-2">
-                                <div className="bg-primary/20 p-2 rounded-lg">
-                                    <UserCircle className="w-6 h-6 text-primary" />
+                                <div className={`p-2 rounded-lg ${isCloudDeployment ? "bg-blue-500/20" : "bg-emerald-500/20"}`}>
+                                    <UserCircle className={`w-6 h-6 ${isCloudDeployment ? "text-blue-400" : "text-emerald-400"}`} />
                                 </div>
                                 <CardTitle className="text-4xl font-black italic uppercase tracking-tighter text-white">Business Profile</CardTitle>
                             </div>
                             <CardDescription className="text-base font-bold text-white/50">
-                                Essential details for your invoice headers.
+                                {isCloudDeployment ? "Set up your company details for professional invoices." : "Essential details for your invoice headers."}
                             </CardDescription>
                         </CardHeader>
                         <form onSubmit={handleSubmit(onSubmit)}>
@@ -506,6 +579,9 @@ export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabl
                                         />
                                     </div>
                                 </div>
+                                {/* Hidden inputs for template fields required by schema */}
+                                <input type="hidden" {...register("invoiceTemplate")} value="modern" />
+                                <input type="hidden" {...register("quoteTemplate")} value="modern" />
                             </CardContent>
                             <CardFooter className="flex gap-4 p-8 pt-0">
                                 <Button type="submit" className="flex-1 h-16 bg-white text-black hover:bg-white/90 rounded-2xl font-black italic uppercase tracking-tighter text-xl active:scale-[0.98] transition-all" disabled={isSubmitting}>
@@ -517,25 +593,32 @@ export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabl
                     </Card>
                 )}
 
-                {/* Step 3: Setup Checklist */}
+                {/* Step 3: Success / Setup Checklist */}
                 {step === 3 && (
                     <Card className="border-none shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] bg-neutral-900/80 backdrop-blur-2xl ring-1 ring-white/10 overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-green-500 via-emerald-400 to-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]"></div>
+                        <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${isCloudDeployment ? "from-blue-500 via-green-400 to-emerald-500" : "from-emerald-500 via-green-400 to-green-500"} shadow-[0_0_15px_rgba(34,197,94,0.3)]`}></div>
                         <CardHeader className="text-center pt-10 pb-6">
-                            <CardTitle className="text-4xl font-black italic uppercase tracking-tighter text-white flex items-center justify-center gap-4">
-                                MISSION COMPLETE <CheckCircle2 className="w-10 h-10 text-green-500" strokeWidth={3} />
+                            <CardTitle className={`text-4xl font-black italic uppercase tracking-tighter text-white flex items-center justify-center gap-4 ${isCloudDeployment ? "text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400" : ""}`}>
+                                {isCloudDeployment ? "CLOUD READY" : "READY TO SLAY"} <CheckCircle2 className="w-10 h-10 text-green-500" strokeWidth={3} />
                             </CardTitle>
                             <CardDescription className="text-base font-bold text-white/50">
                                 {isCloudDeployment
-                                    ? "Pro profile unlocked. Here's what we recommend next."
-                                    : "Business engine started. All features are now available to explore."}
+                                    ? "Your cloud workspace is configured. Connect your services to start invoicing."
+                                    : "Your local instance is ready. All data stays on your infrastructure."}
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="p-8">
                             <SetupChecklist isCloud={isCloudDeployment} />
                         </CardContent>
                         <CardFooter className="p-8 pt-0">
-                            <Button className="w-full h-16 bg-white text-black hover:bg-white/90 rounded-2xl font-black italic uppercase tracking-tighter text-xl active:scale-[0.98] transition-all" onClick={() => router.push("/")}>
+                            <Button
+                                className="w-full h-16 bg-white text-black hover:bg-white/90 rounded-2xl font-black italic uppercase tracking-tighter text-xl active:scale-[0.98] transition-all"
+                                onClick={() => {
+                                    sessionStorage.removeItem("onboarding_step");
+                                    router.push("/");
+                                    router.refresh(); // Ensure server-side state is re-fetched
+                                }}
+                            >
                                 GO TO DASHBOARD <ArrowRight className="ml-2 w-6 h-6" />
                             </Button>
                         </CardFooter>

@@ -4,6 +4,7 @@ import { deleteQuote } from "@/app/actions/quotes";
 import { convertQuoteToInvoice } from "@/app/actions/invoices";
 import { sendQuoteEmail } from "@/app/actions/email";
 import { getSettings } from "@/app/actions/settings";
+import { getDocumentSignature } from "@/app/actions/signatures";
 import { generateQuotePDF } from "@/lib/generatePdf";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -23,7 +24,8 @@ export function QuoteActions({ quote }: { quote: QuoteWithRelations }) {
 
     const generatePDF = async () => {
         const settings = await getSettings();
-        generateQuotePDF(quote, settings);
+        const signature = await getDocumentSignature(quote.id, "QUOTE");
+        generateQuotePDF(quote, settings, signature);
     };
 
     const handleConvert = async () => {

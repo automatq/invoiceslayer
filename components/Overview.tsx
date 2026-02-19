@@ -23,9 +23,21 @@ const chartConfig = {
         label: "Quotes",
         color: "oklch(0.55 0.15 250)",
     },
+    pipeline: {
+        label: "Pipeline",
+        color: "oklch(0.6 0.18 300)",
+    },
 } satisfies ChartConfig
 
-export function Overview({ data }: { data: { name: string; revenue: number; projected?: number; quotes: number }[] }) {
+interface OverviewData {
+    name: string;
+    revenue: number;
+    projected?: number;
+    quotes: number;
+    pipeline?: number;
+}
+
+export function Overview({ data }: { data: OverviewData[] }) {
     return (
         <ChartContainer
             config={chartConfig}
@@ -69,6 +81,18 @@ export function Overview({ data }: { data: { name: string; revenue: number; proj
                             stopOpacity={0.05}
                         />
                     </linearGradient>
+                    <linearGradient id="fillPipeline" x1="0" y1="0" x2="0" y2="1">
+                        <stop
+                            offset="5%"
+                            stopColor="var(--color-pipeline)"
+                            stopOpacity={0.6}
+                        />
+                        <stop
+                            offset="95%"
+                            stopColor="var(--color-pipeline)"
+                            stopOpacity={0.02}
+                        />
+                    </linearGradient>
                 </defs>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border" />
                 <XAxis
@@ -103,6 +127,17 @@ export function Overview({ data }: { data: { name: string; revenue: number; proj
                     }
                 />
                 <Legend verticalAlign="top" height={36} />
+                {data.some(d => d.pipeline && d.pipeline > 0) && (
+                    <Area
+                        dataKey="pipeline"
+                        type="natural"
+                        fill="url(#fillPipeline)"
+                        stroke="var(--color-pipeline)"
+                        strokeWidth={2}
+                        strokeDasharray="3 3"
+                        stackId="b"
+                    />
+                )}
                 <Area
                     dataKey="quotes"
                     type="natural"

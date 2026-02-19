@@ -1,9 +1,12 @@
 import { getInvoice } from "@/app/actions/invoices";
 import { getActiveTemplate } from "@/app/actions/templates";
 import { getSettings } from "@/app/actions/settings";
+import { getDocumentSignature } from "@/app/actions/signatures";
 import { InvoiceActions } from "@/components/InvoiceActions";
 import { StatusBadge } from "@/components/StatusBadge";
 import { InvoiceRenderer } from "@/components/invoices/InvoiceRenderer";
+import { Badge } from "@/components/ui/badge";
+import { PenTool } from "lucide-react";
 import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -14,10 +17,11 @@ export default async function InvoiceDetailsPage({
     params: Promise<{ id: string }>;
 }) {
     const { id } = await params;
-    const [invoice, template, settings] = await Promise.all([
+    const [invoice, template, settings, signature] = await Promise.all([
         getInvoice(id),
         getActiveTemplate(),
-        getSettings()
+        getSettings(),
+        getDocumentSignature(id, "INVOICE")
     ]);
 
     if (!invoice) {
@@ -76,8 +80,14 @@ export default async function InvoiceDetailsPage({
     return (
         <div className="max-w-4xl mx-auto space-y-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
+                <div className="flex items-center gap-2">
                     <StatusBadge status={invoice.status} />
+                    {signature && (
+                        <Badge variant="default" className="bg-green-600">
+                            <PenTool className="w-3 h-3 mr-1" />
+                            Signed
+                        </Badge>
+                    )}
                 </div>
                 <div className="flex items-center gap-2">
                     <InvoiceActions invoice={invoice} />

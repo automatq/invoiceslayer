@@ -1,10 +1,12 @@
 import { getQuote } from "@/app/actions/quotes";
+import { getDocumentSignature } from "@/app/actions/signatures";
 import { QuoteActions } from "@/components/QuoteActions";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { PenTool } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -14,15 +16,18 @@ export default async function QuoteDetailsPage({
     params: Promise<{ id: string }>;
 }) {
     const { id } = await params;
-    const quote = await getQuote(id);
+    const [quote, signature] = await Promise.all([
+        getQuote(id),
+        getDocumentSignature(id, "QUOTE")
+    ]);
 
     if (!quote) {
         notFound();
     }
 
     // Default values if not set
-    const subtotal = quote.subtotal || quote.items.reduce((acc, item) => acc + item.amount, 0);
-    const taxTotal = quote.taxTotal || quote.items.reduce((acc, item) => acc + (item.amount * ((item.taxRate || 0) / 100)), 0);
+    const subtotal = quote.subtotal || quote.items.reduce((acc: number, item: any) => acc + item.amount, 0);
+    const taxTotal = quote.taxTotal || quote.items.reduce((acc: number, item: any) => acc + (item.amount * ((item.taxRate || 0) / 100)), 0);
     const total = quote.total;
 
     return (
@@ -35,6 +40,12 @@ export default async function QuoteDetailsPage({
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
+                    {signature && (
+                        <Badge className="bg-green-600">
+                            <PenTool className="w-3 h-3 mr-1" />
+                            Signed
+                        </Badge>
+                    )}
                     <Badge variant="outline" className="text-base px-3 py-1">
                         {quote.status}
                     </Badge>

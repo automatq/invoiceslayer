@@ -8,7 +8,7 @@ export default async function OnboardingPage() {
     const session = await auth();
     const settings = await getSettings();
 
-    // If onboarding is already finished, go to dashboard
+    // If user has already completed onboarding, redirect to dashboard
     if (settings) {
         redirect("/");
     }
@@ -24,6 +24,7 @@ export default async function OnboardingPage() {
             googleEnabled={googleEnabled}
             githubEnabled={githubEnabled}
             initialSession={session}
+            hasSettings={!!settings}
         />
     );
 }

@@ -215,6 +215,26 @@
   --gradient-color-2: oklch(0.65 0.12 280);
 }
 
+.gradient-border.purple {
+  --gradient-color-1: oklch(0.55 0.2 300);
+  --gradient-color-2: oklch(0.65 0.18 280);
+}
+
+.gradient-border.teal {
+  --gradient-color-1: oklch(0.55 0.15 180);
+  --gradient-color-2: oklch(0.65 0.12 170);
+}
+
+.gradient-border.orange {
+  --gradient-color-1: oklch(0.65 0.18 60);
+  --gradient-color-2: oklch(0.75 0.15 50);
+}
+
+.gradient-border.pink {
+  --gradient-color-1: oklch(0.65 0.2 350);
+  --gradient-color-2: oklch(0.75 0.18 340);
+}
+
 .gradient-border::before {
   content: "";
   position: absolute;

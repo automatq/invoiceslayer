@@ -29,6 +29,8 @@ model User {
   notifications   Notification[]
   auditLogs       AuditLog[]
   invoiceTemplate InvoiceTemplate?
+  pipelines       Pipeline[]
+  deals           Deal[]
   createdAt       DateTime           @default(now())
 
   updatedAt DateTime @updatedAt
@@ -83,6 +85,11 @@ model Client {
   quotes            Quote[]
   projects          Project[]
   recurringInvoices RecurringInvoice[]
+  deals             Deal[]
+  signatures        DocumentSignature[]
+  leadScore         Int                @default(0)
+  lastContact       DateTime?
+  totalDealValue    Float              @default(0)
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   portalToken       String?            @unique
@@ -108,6 +115,8 @@ model Invoice {
   payments       Payment[]
   projectId      String?
   project        Project?        @relation(fields: [projectId], references: [id])
+  dealId         String?
+  deal           Deal?           @relation(fields: [dealId], references: [id])
   notes          String?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
@@ -145,6 +154,8 @@ model Quote {
   total      Float
   projectId  String?
   project    Project?    @relation(fields: [projectId], references: [id])
+  dealId     String?
+  deal       Deal?       @relation(fields: [dealId], references: [id])
   notes      String?
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
@@ -292,6 +303,99 @@ model InvoiceTemplate {
   updatedAt DateTime @updatedAt
 
   @@unique([userId])
+}
+
+// Pipeline CRM Models
+model Pipeline {
+  id          String          @id @default(cuid())
+  name        String
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stages      PipelineStage[]
+  deals       Deal[]
+  isDefault   Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([userId, name])
+}
+
+model PipelineStage {
+  id          String    @id @default(cuid())
+  pipelineId  String
+  pipeline    Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  name        String
+  color       String    @default("#3b82f6")
+  order       Int
+  probability Float     @default(0)
+  deals       Deal[]
+  createdAt   DateTime  @default(now())
+
+  @@unique([pipelineId, order])
+}
+
+model Deal {
+  id            String        @id @default(cuid())
+  title         String
+  description   String?
+  value         Float
+  currency      String        @default("USD")
+  pipelineId    String
+  pipeline      Pipeline      @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  stageId       String
+  stage         PipelineStage @relation(fields: [stageId], references: [id])
+  clientId      String
+  client        Client        @relation(fields: [clientId], references: [id])
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status        String        @default("OPEN") // OPEN, WON, LOST, STALE
+  source        String?
+  priority      String        @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  expectedClose DateTime?
+  activities    DealActivity[]
+  notes         DealNote[]
+  quotes        Quote[]
+  invoices      Invoice[]
+  customFields  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model DealActivity {
+  id          String   @id @default(cuid())
+  dealId      String
+  deal        Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  type        String   // CALL, EMAIL, MEETING, NOTE, STAGE_CHANGE, QUOTE_SENT, INVOICE_SENT
+  description String
+  metadata    String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+}
+
+model DealNote {
+  id        String   @id @default(cuid())
+  dealId    String
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  content   String
+  isPinned  Boolean  @default(false)
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// E-Signature model for document signing
+model DocumentSignature {
+  id            String   @id @default(cuid())
+  documentId    String
+  documentType  String   // INVOICE, QUOTE, CONTRACT
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  signatureData String   // base64 SVG/PNG
+  signedAt      DateTime @default(now())
+  ipAddress     String?
+  userAgent     String?
+  documentHash  String   // SHA256 of document at signing
+  metadata      String?  // JSON: {name, title, company}
 }
 
 // SOC2 Audit Log — records all significant data operations
