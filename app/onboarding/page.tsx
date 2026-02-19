@@ -13,6 +13,11 @@ export default async function OnboardingPage() {
         redirect("/");
     }
 
+    // If user is not logged in, redirect to login
+    if (!session?.user) {
+        redirect("/login");
+    }
+
     const googleEnabled = !!(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
     const githubEnabled = !!(process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET);
     const hasTurso = !!(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN);
