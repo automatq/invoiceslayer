@@ -67,14 +67,38 @@ export async function createSettings(data: SettingsFormValues) {
             localAiModel: data.localAiModel || "llama3",
         };
         
-        await prisma.setting.upsert({
-            where: { userId },
-            update: createData,
-            create: {
-                ...createData,
-                userId
-            }
+        // Try to find existing settings
+        const existing = await prisma.setting.findFirst({
+            where: { userId }
         });
+        
+        if (existing) {
+            // Update existing
+            await prisma.setting.update({
+                where: { id: existing.id },
+                data: createData
+            });
+        } else {
+            // Create new - try with userId first
+            try {
+                await prisma.setting.create({
+                    data: {
+                        ...createData,
+                        userId
+                    }
+                });
+            } catch (err: any) {
+                // If userId column doesn't exist, create without it
+                if (err.message?.includes("userId")) {
+                    await prisma.setting.create({
+                        data: createData as any
+                    });
+                } else {
+                    throw err;
+                }
+            }
+        }
+        
         revalidatePath("/settings");
         await logAuditEvent({
             action: "SETTINGS_CHANGE",
@@ -99,11 +123,19 @@ export async function getSettings(userId?: string) {
             finalUserId = session.user.id;
         }
 
-        const settings = await prisma.setting.findUnique({
-            where: { userId: finalUserId }
-        });
-
-        return settings;
+        // Try with userId first, fallback to first record if column doesn't exist
+        try {
+            const settings = await prisma.setting.findFirst({
+                where: { userId: finalUserId }
+            });
+            if (settings) return settings;
+        } catch (err: any) {
+            if (!err.message?.includes("userId")) throw err;
+        }
+        
+        // Fallback: return first setting (for databases without userId column)
+        const fallback = await prisma.setting.findFirst();
+        return fallback;
     } catch (e) {
         console.error("Error getting settings:", e);
         return null;
