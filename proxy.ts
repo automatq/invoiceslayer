@@ -22,7 +22,7 @@ const SECURITY_HEADERS = {
 };
 
 const CRON_ROUTES = ["/api/cron/recurring", "/api/cron/reminders"];
-const AUTH_ROUTES = ["/login", "/register", "/api/auth"];
+const AUTH_PAGES = ["/login", "/register"];
 const PUBLIC_PORTAL_ROUTES = ["/p/", "/portal/"];
 const PUBLIC_APP_ROUTES = ["/onboarding", "/images"];
 
@@ -40,22 +40,26 @@ export default auth((req) => {
         return NextResponse.next();
     }
 
-    // 2. Auth & Route protection
-    const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
+    // 2. Route protection
+    const isAuthPage = AUTH_PAGES.some((page) => pathname.startsWith(page));
+    const isAuthApi = pathname.startsWith("/api/auth");
     const isPublicPortalRoute = PUBLIC_PORTAL_ROUTES.some((route) => pathname.startsWith(route));
+    const isPublicAppRoute = PUBLIC_APP_ROUTES.some((route) => pathname.startsWith(route));
 
-    if (isAuthRoute) {
+    // Allow auth APIs to pass through
+    if (isAuthApi) return NextResponse.next();
+
+    // Redirect logged-in users away from login/register pages
+    if (isAuthPage) {
         if (isLoggedIn) {
             return NextResponse.redirect(new URL("/", req.url));
         }
         return NextResponse.next();
     }
 
-    if (!isLoggedIn && !isPublicPortalRoute) {
-        const isPublicAppRoute = PUBLIC_APP_ROUTES.some((route) => pathname.startsWith(route));
-        if (!isPublicAppRoute) {
-            return NextResponse.redirect(new URL("/login", req.url));
-        }
+    // Redirect unauthenticated users to login, except for public routes
+    if (!isLoggedIn && !isPublicPortalRoute && !isPublicAppRoute) {
+        return NextResponse.redirect(new URL("/login", req.url));
     }
 
     // 3. Security Headers

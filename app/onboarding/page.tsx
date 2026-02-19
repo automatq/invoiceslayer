@@ -1,13 +1,29 @@
 // Server component — reads env vars and passes context to the client wizard
+import { auth } from "@/lib/auth";
 import { OnboardingWizard } from "./wizard";
+import { getSettings } from "@/app/actions/settings";
+import { redirect } from "next/navigation";
 
-export default function OnboardingPage() {
-    const hasOAuth = !!(
-        (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) ||
-        (process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET)
-    );
+export default async function OnboardingPage() {
+    const session = await auth();
+    const settings = await getSettings();
+
+    // If onboarding is already finished, go to dashboard
+    if (settings) {
+        redirect("/");
+    }
+
+    const googleEnabled = !!(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
+    const githubEnabled = !!(process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET);
     const hasTurso = !!(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN);
-    const isCloudDeployment = hasOAuth || hasTurso;
+    const isCloudDeployment = googleEnabled || githubEnabled || hasTurso;
 
-    return <OnboardingWizard isCloudDeployment={isCloudDeployment} />;
+    return (
+        <OnboardingWizard
+            isCloudDeployment={isCloudDeployment}
+            googleEnabled={googleEnabled}
+            githubEnabled={githubEnabled}
+            initialSession={session}
+        />
+    );
 }

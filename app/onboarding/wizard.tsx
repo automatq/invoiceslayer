@@ -4,18 +4,22 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { createSettings } from "@/app/actions/settings";
+import { register as registerUser } from "@/app/actions/auth";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Image from "next/image";
-import { CheckCircle2, ArrowRight, Server, Cloud, Mail, CreditCard, Bot, Zap, ChevronRight } from "lucide-react";
+import { CheckCircle2, ArrowRight, Server, Cloud, Mail, CreditCard, Bot, Zap, ChevronRight, Lock, UserPlus, UserCircle } from "lucide-react";
 import Link from "next/link";
 import { InteractiveButton } from "@/components/ui/interactive-button";
 import { Button } from "@/components/ui/button";
+import { useSession, signIn } from "next-auth/react";
+import { Session } from "next-auth";
+import { SocialLogins } from "@/components/SocialLogins";
 
 const SettingsSchema = z.object({
     companyName: z.string().min(1, "Company name is required"),
@@ -30,8 +34,19 @@ const SettingsSchema = z.object({
 
 type SettingsFormValues = z.infer<typeof SettingsSchema>;
 
+const RegistrationSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    email: z.string().email("Invalid email"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+type RegistrationFormValues = z.infer<typeof RegistrationSchema>;
+
 interface OnboardingWizardProps {
     isCloudDeployment: boolean;
+    googleEnabled: boolean;
+    githubEnabled: boolean;
+    initialSession?: Session | null;
 }
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
@@ -50,7 +65,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
                         {i < current ? <CheckCircle2 className="w-5 h-5" strokeWidth={3} /> : i + 1}
                     </div>
                     {i < total - 1 && (
-                        <div className={`h-[2px] w-12 transition-all duration-500 mx-1 ${i < current ? "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]" : "bg-neutral-800"}`} />
+                        <div className={`h-[2px] w-8 sm:w-12 transition-all duration-500 mx-1 ${i < current ? "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]" : "bg-neutral-800"}`} />
                     )}
                 </div>
             ))}
@@ -205,10 +220,20 @@ function SetupChecklist({ isCloud }: { isCloud: boolean }) {
     );
 }
 
-export function OnboardingWizard({ isCloudDeployment }: OnboardingWizardProps) {
+export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabled, initialSession }: OnboardingWizardProps) {
     const router = useRouter();
+    const { data: session, status } = useSession();
     const [step, setStep] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const isLoggedIn = status === "authenticated" || !!initialSession;
+
+    // Automatically advance if logged in when on Step 1
+    useEffect(() => {
+        if (step === 1 && isLoggedIn) {
+            setStep(2);
+        }
+    }, [step, isLoggedIn]);
 
     const {
         register,
@@ -229,13 +254,58 @@ export function OnboardingWizard({ isCloudDeployment }: OnboardingWizardProps) {
         },
     });
 
+    const {
+        register: registerReg,
+        handleSubmit: handleSubmitReg,
+        formState: { errors: errorsReg },
+    } = useForm<RegistrationFormValues>({
+        resolver: zodResolver(RegistrationSchema),
+        defaultValues: {
+            name: "",
+            email: "",
+            password: "",
+        },
+    });
+
+    const onRegisterSubmit = async (data: RegistrationFormValues) => {
+        setIsSubmitting(true);
+        try {
+            const result = await registerUser(data);
+            if (result.success) {
+                toast.success("Account created! Please sign in.");
+                // After successful registration, lead to login or auto-signin if possible
+                // For simplicity, we trigger a sign-in directly
+                const loginResult = await signIn("credentials", {
+                    email: data.email,
+                    password: data.password,
+                    callbackUrl: "/onboarding",
+                });
+            } else {
+                toast.error(result.error || "Failed to create account");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("An unexpected error occurred during registration");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const onBeginSetup = () => {
+        if (isLoggedIn) {
+            setStep(2);
+        } else {
+            setStep(1);
+        }
+    };
+
     const onSubmit = async (data: SettingsFormValues) => {
         setIsSubmitting(true);
         try {
             const result = await createSettings(data);
             if (result.success) {
                 toast.success("Settings saved successfully!");
-                setStep(2);
+                setStep(3);
             } else {
                 toast.error("Failed to save settings", {
                     description: result.message || "Please try again.",
@@ -248,6 +318,8 @@ export function OnboardingWizard({ isCloudDeployment }: OnboardingWizardProps) {
             setIsSubmitting(false);
         }
     };
+
+    const showOAuth = isCloudDeployment && (googleEnabled || githubEnabled);
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-neutral-950 p-4 font-sans selection:bg-primary/30">
@@ -274,7 +346,7 @@ export function OnboardingWizard({ isCloudDeployment }: OnboardingWizardProps) {
                     </div>
                 </div>
 
-                <StepIndicator current={step} total={3} />
+                <StepIndicator current={step} total={4} />
 
                 {/* Step 0: Welcome */}
                 {step === 0 && (
@@ -283,7 +355,7 @@ export function OnboardingWizard({ isCloudDeployment }: OnboardingWizardProps) {
                         <CardHeader className="text-center pt-10 pb-2">
                             <CardTitle className="text-4xl font-black italic uppercase tracking-tighter text-white">Welcome Aboard</CardTitle>
                             <CardDescription className="text-base font-bold text-white/50">
-                                Let's get your business profile set up in seconds.
+                                Let's get your business engine started.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="p-8">
@@ -292,15 +364,15 @@ export function OnboardingWizard({ isCloudDeployment }: OnboardingWizardProps) {
                             <div className="space-y-4 mb-10">
                                 <div className="flex items-center gap-4 group/item">
                                     <CheckCircle2 className="w-6 h-6 text-green-500 shrink-0" />
-                                    <span className="font-bold italic text-white/90">Professional invoice & quote templates</span>
+                                    <span className="font-bold italic text-white/90 text-sm sm:text-base">Professional invoice & quote templates</span>
                                 </div>
                                 <div className="flex items-center gap-4 group/item">
                                     <CheckCircle2 className="w-6 h-6 text-green-500 shrink-0" />
-                                    <span className="font-bold italic text-white/90">Automatic tax & currency management</span>
+                                    <span className="font-bold italic text-white/90 text-sm sm:text-base">Automatic tax & currency management</span>
                                 </div>
                                 <div className="flex items-center gap-4 group/item">
                                     <CheckCircle2 className="w-6 h-6 text-green-500 shrink-0" />
-                                    <span className="font-bold italic text-white/90">
+                                    <span className="font-bold italic text-white/90 text-sm sm:text-base">
                                         {isCloudDeployment
                                             ? "AI-powered invoice generation"
                                             : "AI-powered generation via local Ollama"}
@@ -308,19 +380,79 @@ export function OnboardingWizard({ isCloudDeployment }: OnboardingWizardProps) {
                                 </div>
                             </div>
 
-                            <InteractiveButton className="w-full h-16 text-xl font-black italic tracking-tighter uppercase rounded-2xl shadow-2xl shadow-primary/20" onClick={() => setStep(1)}>
+                            <InteractiveButton className="w-full h-16 text-xl font-black italic tracking-tighter uppercase rounded-2xl shadow-2xl shadow-primary/20" onClick={onBeginSetup}>
                                 BEGIN SETUP <ArrowRight className="ml-2 w-6 h-6" />
                             </InteractiveButton>
                         </CardContent>
                     </Card>
                 )}
 
-                {/* Step 1: Company Details */}
+                {/* Step 1: Security / Account Creation */}
                 {step === 1 && (
+                    <Card className="border-none shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] bg-neutral-900/80 backdrop-blur-2xl ring-1 ring-white/10 overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-purple-500 via-violet-400 to-purple-500"></div>
+                        <CardHeader className="pt-10 pb-2">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="bg-purple-500/20 p-2 rounded-lg">
+                                    <Lock className="w-6 h-6 text-purple-400" />
+                                </div>
+                                <CardTitle className="text-4xl font-black italic uppercase tracking-tighter text-white">Security</CardTitle>
+                            </div>
+                            <CardDescription className="text-base font-bold text-white/50">
+                                {showOAuth ? "Sign in to save your data to the cloud." : "Create your administrative account."}
+                            </CardDescription>
+                        </CardHeader>
+
+                        {showOAuth ? (
+                            <CardContent className="p-8 space-y-6">
+                                <SocialLogins googleEnabled={googleEnabled} githubEnabled={githubEnabled} />
+                                <div className="text-center text-xs text-white/30 font-bold uppercase tracking-widest mt-4">
+                                    Secure cloud authentication enabled
+                                </div>
+                            </CardContent>
+                        ) : (
+                            <form onSubmit={handleSubmitReg(onRegisterSubmit)}>
+                                <CardContent className="space-y-4 p-8">
+                                    <div className="space-y-2 group">
+                                        <Label className="text-[10px] uppercase tracking-[0.4em] font-black text-white/30 group-focus-within:text-purple-400 transition-colors ml-1">Full Name</Label>
+                                        <Input {...registerReg("name")} placeholder="JOHN DOE" className="h-14 bg-white/[0.03] border-white/10 text-white rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all font-black" />
+                                        {errorsReg.name && <p className="text-[10px] uppercase font-black text-red-500 mt-1 ml-1">{errorsReg.name.message}</p>}
+                                    </div>
+                                    <div className="space-y-2 group">
+                                        <Label className="text-[10px] uppercase tracking-[0.4em] font-black text-white/30 group-focus-within:text-purple-400 transition-colors ml-1">Admin Email</Label>
+                                        <Input type="email" {...registerReg("email")} placeholder="ADMIN@EXAMPLE.COM" className="h-14 bg-white/[0.03] border-white/10 text-white rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all font-black" />
+                                        {errorsReg.email && <p className="text-[10px] uppercase font-black text-red-500 mt-1 ml-1">{errorsReg.email.message}</p>}
+                                    </div>
+                                    <div className="space-y-2 group">
+                                        <Label className="text-[10px] uppercase tracking-[0.4em] font-black text-white/30 group-focus-within:text-purple-400 transition-colors ml-1">Password</Label>
+                                        <Input type="password" {...registerReg("password")} placeholder="••••••••" className="h-14 bg-white/[0.03] border-white/10 text-white rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all font-black" />
+                                        {errorsReg.password && <p className="text-[10px] uppercase font-black text-red-500 mt-1 ml-1">{errorsReg.password.message}</p>}
+                                    </div>
+
+                                    <Button type="submit" className="w-full h-16 mt-4 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl font-black italic uppercase tracking-tighter text-xl shadow-lg shadow-purple-500/20" disabled={isSubmitting}>
+                                        {isSubmitting ? "CREATING..." : "CREATE ACCOUNT"}
+                                        {!isSubmitting && <UserPlus className="ml-2 w-6 h-6" />}
+                                    </Button>
+                                </CardContent>
+                            </form>
+                        )}
+                        <CardFooter className="justify-center pb-8 pt-0">
+                            <p className="text-xs font-bold text-white/30 italic">Already have an account? <Link href="/login" className="text-purple-400 hover:underline">Log In</Link></p>
+                        </CardFooter>
+                    </Card>
+                )}
+
+                {/* Step 2: Company Details */}
+                {step === 2 && (
                     <Card className="border-none shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] bg-neutral-900/80 backdrop-blur-2xl ring-1 ring-white/10 overflow-hidden">
                         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary via-blue-500 to-primary/50"></div>
                         <CardHeader className="pt-10 pb-2">
-                            <CardTitle className="text-4xl font-black italic uppercase tracking-tighter text-white">Business Profile</CardTitle>
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="bg-primary/20 p-2 rounded-lg">
+                                    <UserCircle className="w-6 h-6 text-primary" />
+                                </div>
+                                <CardTitle className="text-4xl font-black italic uppercase tracking-tighter text-white">Business Profile</CardTitle>
+                            </div>
                             <CardDescription className="text-base font-bold text-white/50">
                                 Essential details for your invoice headers.
                             </CardDescription>
@@ -376,9 +508,6 @@ export function OnboardingWizard({ isCloudDeployment }: OnboardingWizardProps) {
                                 </div>
                             </CardContent>
                             <CardFooter className="flex gap-4 p-8 pt-0">
-                                <Button type="button" variant="outline" onClick={() => setStep(0)} className="h-16 px-10 border-white/10 text-white/40 hover:text-white hover:bg-white/5 rounded-2xl font-black uppercase tracking-widest transition-all">
-                                    BACK
-                                </Button>
                                 <Button type="submit" className="flex-1 h-16 bg-white text-black hover:bg-white/90 rounded-2xl font-black italic uppercase tracking-tighter text-xl active:scale-[0.98] transition-all" disabled={isSubmitting}>
                                     {isSubmitting ? "SAVING..." : "SAVE & CONTINUE"}
                                     {!isSubmitting && <ArrowRight className="ml-2 w-6 h-6" />}
@@ -388,8 +517,8 @@ export function OnboardingWizard({ isCloudDeployment }: OnboardingWizardProps) {
                     </Card>
                 )}
 
-                {/* Step 2: Setup Checklist */}
-                {step === 2 && (
+                {/* Step 3: Setup Checklist */}
+                {step === 3 && (
                     <Card className="border-none shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] bg-neutral-900/80 backdrop-blur-2xl ring-1 ring-white/10 overflow-hidden">
                         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-green-500 via-emerald-400 to-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]"></div>
                         <CardHeader className="text-center pt-10 pb-6">

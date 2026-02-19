@@ -13,9 +13,6 @@ const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;
 let adapter;
 
 if (tursoUrl && tursoUrl.includes("turso.io")) {
-    if (!globalForPrisma.prisma) {
-        console.log("🔌 Connecting to Turso Database...");
-    }
     adapter = new PrismaLibSql({
         url: tursoUrl,
         authToken: tursoAuthToken,
