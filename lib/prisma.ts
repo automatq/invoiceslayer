@@ -13,13 +13,17 @@ const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;
 let adapter;
 
 if (tursoUrl && tursoUrl.includes("turso.io")) {
-    console.log("🔌 Connecting to Turso Database...");
+    if (!globalForPrisma.prisma) {
+        console.log("🔌 Connecting to Turso Database...");
+    }
     adapter = new PrismaLibSql({
         url: tursoUrl,
         authToken: tursoAuthToken,
     });
 } else {
-    console.log("📂 Using Local SQLite Database");
+    if (!globalForPrisma.prisma) {
+        console.log("📂 Using Local SQLite Database");
+    }
     const databaseUrl = process.env.DATABASE_URL?.replace("file:", "") ?? "prisma/dev.db";
     adapter = new PrismaBetterSqlite3({ url: databaseUrl });
 }
@@ -28,7 +32,7 @@ export const prisma =
     globalForPrisma.prisma ??
     new PrismaClient({
         adapter,
-        log: ["query"],
+        log: process.env.NODE_ENV === "development" ? ["query"] : [],
     });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;

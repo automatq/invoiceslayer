@@ -154,6 +154,11 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+    const rl = rateLimit(`agent:${getIdentifier(req)}`, { limit: 60, windowSec: 60 });
+    if (!rl.success) {
+        return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });
+    }
+
     const userId = await authenticate(req);
     if (!userId) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

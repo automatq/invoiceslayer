@@ -34,26 +34,25 @@ export async function POST(req: Request) {
             const invoiceId = session.metadata?.invoiceId;
 
             if (invoiceId) {
-                console.log(`Payment succeeded for invoice: ${invoiceId}`);
-
-                // Fetch invoice with userId
+                // Fetch invoice with userId and current payment state
                 const invoice = await prisma.invoice.findUnique({
                     where: { id: invoiceId },
-                    select: { number: true, userId: true }
+                    select: { number: true, userId: true, total: true, amountPaid: true }
                 });
 
                 if (!invoice) return new NextResponse("Invoice not found", { status: 404 });
 
                 const userId = invoice.userId;
+                const paymentAmount = session.amount_total ? session.amount_total / 100 : 0;
+                const newAmountPaid = invoice.amountPaid + paymentAmount;
+                const newStatus = newAmountPaid >= invoice.total ? "PAID" : "PARTIAL";
 
                 // Update Invoice Status
                 await prisma.invoice.update({
                     where: { id: invoiceId },
                     data: {
-                        status: "PAID",
-                        amountPaid: {
-                            increment: session.amount_total ? session.amount_total / 100 : 0
-                        }
+                        status: newStatus,
+                        amountPaid: newAmountPaid,
                     }
                 });
 

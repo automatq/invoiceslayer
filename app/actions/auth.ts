@@ -46,7 +46,7 @@ export async function register(formData: z.infer<typeof RegisterSchema>) {
     }
 }
 
-export async function login(formData: any) {
+export async function login(formData: { email: string; password: string }) {
     try {
         await signIn("credentials", {
             email: formData.email,

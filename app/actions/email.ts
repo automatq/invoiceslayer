@@ -14,7 +14,6 @@ async function getResendClient() {
     let apiKey = settings?.resendApiKey;
 
     if (!apiKey) {
-        console.log("[Email] No settings API key found, falling back to env");
         apiKey = defaultResendKey;
     }
 
