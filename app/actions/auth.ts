@@ -42,6 +42,7 @@ export async function register(formData: z.infer<typeof RegisterSchema>) {
         // After registration, we can sign them in or redirect to login
         return { success: "User created!" };
     } catch (e) {
+        console.error('[register] Error creating user:', e);
         return { error: "Something went wrong!" };
     }
 }

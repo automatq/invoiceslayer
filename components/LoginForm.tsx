@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import Link from "next/link";
+import { Link, useRouter } from "@/i18n/navigation";
 import { useTransition } from "react";
 import { login } from "@/app/actions/auth";
 import { toast } from "sonner";
