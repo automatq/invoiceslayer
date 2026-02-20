@@ -6,7 +6,7 @@ import Stripe from "stripe";
 import { headers } from "next/headers";
 import { getSettings } from "@/app/actions/settings";
 
-const defaultStripe = new Stripe(process.env.STRIPE_SECRET_KEY as string || "", {
+const defaultStripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_placeholder", {
     apiVersion: "2026-01-28.clover" as any,
     typescript: true,
 });
