@@ -4,6 +4,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { CommandPalette } from "@/components/CommandPalette";
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
+import { locales } from '@/i18n/config';
+import { notFound } from 'next/navigation';
 import { SessionProvider } from "next-auth/react";
 import { Montserrat, Playfair_Display, Lato, Roboto_Slab, Lora } from "next/font/google";
 import type { Metadata } from "next";
@@ -51,12 +53,21 @@ export default async function LocaleLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
+  console.log(`[LocaleLayout] Rendering for locale: ${locale}`);
+
+  // Validate locale
+  if (!locales.includes(locale as any)) {
+    console.warn(`[LocaleLayout] Invalid locale: ${locale}`);
+    notFound();
+  }
+
   const messages = await getMessages();
+  console.log(`[LocaleLayout] Messages loaded for ${locale}`);
 
   return (
     <html lang={locale} suppressHydrationWarning>
       <body className={`${montserrat.variable} ${playfair.variable} ${lato.variable} ${robotoSlab.variable} ${lora.variable} antialiased`}>
-        <NextIntlClientProvider messages={messages}>
+        <NextIntlClientProvider locale={locale} messages={messages}>
           <SessionProvider>
             <ThemeProvider
               attribute="class"

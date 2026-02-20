@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { SidebarAvatar } from "@/components/SidebarAvatar";
 import { FileText, LayoutDashboard, Settings, UserCircle, Receipt, History, ChartBar, Calendar, Wallet, Kanban, PieChart } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export function DashboardClientLayout({
     children,
@@ -20,12 +21,14 @@ export function DashboardClientLayout({
     children: React.ReactNode;
     header: React.ReactNode;
 }) {
+    const t = useTranslations("navigation");
+
     const groups = [
         {
             title: "System",
             links: [
                 {
-                    label: "Dashboard",
+                    label: t("dashboard"),
                     href: "/",
                     icon: <LayoutDashboard className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
                 },
@@ -35,12 +38,12 @@ export function DashboardClientLayout({
             title: "Growth",
             links: [
                 {
-                    label: "Pipeline",
+                    label: t("pipeline"),
                     href: "/pipeline",
                     icon: <Kanban className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
                 },
                 {
-                    label: "Clients",
+                    label: t("clients"),
                     href: "/clients",
                     icon: <UserCircle className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
                 },
@@ -50,22 +53,22 @@ export function DashboardClientLayout({
             title: "Operations",
             links: [
                 {
-                    label: "Invoices",
+                    label: t("invoices"),
                     href: "/invoices",
                     icon: <FileText className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
                 },
                 {
-                    label: "Quotes",
+                    label: t("quotes"),
                     href: "/quotes",
                     icon: <Receipt className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
                 },
                 {
-                    label: "Recurring",
+                    label: t("recurring"),
                     href: "/recurring",
                     icon: <History className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
                 },
                 {
-                    label: "Calendar",
+                    label: t("calendar"),
                     href: "/calendar",
                     icon: <Calendar className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
                 },
@@ -75,17 +78,17 @@ export function DashboardClientLayout({
             title: "Accounting",
             links: [
                 {
-                    label: "Reports",
+                    label: t("reports"),
                     href: "/reports",
                     icon: <ChartBar className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
                 },
                 {
-                    label: "Expenses",
+                    label: t("expenses"),
                     href: "/expenses",
                     icon: <Wallet className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
                 },
                 {
-                    label: "Budget",
+                    label: t("budget"), // Not in navigation translation yet
                     href: "/budget",
                     icon: <PieChart className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
                 },
@@ -95,7 +98,7 @@ export function DashboardClientLayout({
             title: "System",
             links: [
                 {
-                    label: "Settings",
+                    label: t("settings"),
                     href: "/settings",
                     icon: <Settings className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
                 },
