@@ -1,11 +1,12 @@
 import { Suspense } from "react";
-import { getProfitBuckets, getBudgetPerformance } from "@/app/actions/budget";
+import { getProfitBuckets, getBudgetPerformance, getGoalsProgress } from "@/app/actions/budget";
 import { getDashboardMetrics } from "@/app/actions/reports";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { ProfitAllocationOverview } from "@/components/budget/ProfitAllocationOverview";
 import { BucketList } from "@/components/budget/BucketList";
 import { CategoryBudgetList } from "@/components/budget/CategoryBudgetList";
+import { GoalTracker } from "@/components/budget/GoalTracker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Percent, TrendingUp } from "lucide-react";
 
@@ -21,7 +22,7 @@ export default async function BudgetPage({
     const session = await auth();
     const userId = session?.user?.id;
 
-    const [buckets, metrics, performance, uniqueCategories] = await Promise.all([
+    const [buckets, metrics, performance, uniqueCategories, goals] = await Promise.all([
         getProfitBuckets(),
         getDashboardMetrics(currentYear, basis as "accrual" | "cash"),
         getBudgetPerformance(),
@@ -30,6 +31,7 @@ export default async function BudgetPage({
             select: { category: true },
             distinct: ["category"],
         }),
+        getGoalsProgress(),
     ]);
 
     const categories = uniqueCategories.map((c: any) => c.category);
@@ -89,6 +91,9 @@ export default async function BudgetPage({
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+                <div className="col-span-full">
+                    <GoalTracker goals={goals} />
+                </div>
                 <div className="col-span-4 space-y-6">
                     <ProfitAllocationOverview buckets={buckets} netProfit={metrics.netProfit} />
                     <CategoryBudgetList performance={performance} categories={categories} />

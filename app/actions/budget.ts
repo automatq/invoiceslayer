@@ -258,3 +258,163 @@ export async function getBudgetPerformance(teamId?: string) {
         return [];
     }
 }
+export type FinancialGoalFormValues = {
+    name: string;
+    targetAmount: number;
+    type: "REVENUE" | "PROFIT";
+    startDate: Date;
+    endDate: Date;
+    teamId?: string;
+};
+
+export async function getFinancialGoals(teamId?: string) {
+    const { userId } = await getRequiredSession();
+    try {
+        const goals = await prisma.financialGoal.findMany({
+            where: {
+                userId,
+                ...(teamId ? { teamId } : {}),
+            },
+            orderBy: {
+                endDate: "asc",
+            },
+        });
+        return goals;
+    } catch (error) {
+        console.error("Failed to fetch financial goals:", error);
+        return [];
+    }
+}
+
+export async function createFinancialGoal(data: FinancialGoalFormValues) {
+    const { userId } = await getRequiredSession();
+    try {
+        const goal = await prisma.financialGoal.create({
+            data: {
+                ...data,
+                userId,
+            },
+        });
+
+        await logAuditEvent({
+            action: "CREATE",
+            resource: "FinancialGoal",
+            resourceId: goal.id,
+            userId,
+        });
+
+        revalidatePath("/budget");
+        return { success: true, data: goal };
+    } catch (error) {
+        console.error("Failed to create financial goal:", error);
+        return { success: false, message: "Failed to create financial goal" };
+    }
+}
+
+export async function updateFinancialGoal(id: string, data: Partial<FinancialGoalFormValues>) {
+    const { userId } = await getRequiredSession();
+    try {
+        const goal = await prisma.financialGoal.update({
+            where: { id, userId },
+            data,
+        });
+
+        await logAuditEvent({
+            action: "UPDATE",
+            resource: "FinancialGoal",
+            resourceId: id,
+            userId,
+        });
+
+        revalidatePath("/budget");
+        return { success: true, data: goal };
+    } catch (error) {
+        console.error("Failed to update financial goal:", error);
+        return { success: false, message: "Failed to update financial goal" };
+    }
+}
+
+export async function deleteFinancialGoal(id: string) {
+    const { userId } = await getRequiredSession();
+    try {
+        await prisma.financialGoal.delete({
+            where: { id, userId },
+        });
+
+        await logAuditEvent({
+            action: "DELETE",
+            resource: "FinancialGoal",
+            resourceId: id,
+            userId,
+        });
+
+        revalidatePath("/budget");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to delete financial goal:", error);
+        return { success: false, message: "Failed to delete financial goal" };
+    }
+}
+
+export async function getGoalsProgress(teamId?: string) {
+    const { userId } = await getRequiredSession();
+    try {
+        const goals = await getFinancialGoals(teamId);
+
+        // Fetch all paid invoices and expenses to calculate performance
+        const [paidInvoices, allExpenses] = await Promise.all([
+            prisma.invoice.findMany({
+                where: {
+                    userId,
+                    status: "PAID",
+                    ...(teamId ? { teamId } : {}),
+                },
+                select: { total: true, date: true },
+            }),
+            prisma.expense.findMany({
+                where: {
+                    userId,
+                    ...(teamId ? { teamId } : {}),
+                },
+                select: { amount: true, date: true },
+            }),
+        ]);
+
+        const progress = goals.map((goal: any) => {
+            const start = new Date(goal.startDate);
+            const end = new Date(goal.endDate);
+
+            let actual = 0;
+            if (goal.type === "REVENUE") {
+                actual = paidInvoices
+                    .filter(i => i.date >= start && i.date <= end)
+                    .reduce((sum, i) => sum + i.total, 0);
+            } else if (goal.type === "PROFIT") {
+                const revenue = paidInvoices
+                    .filter(i => i.date >= start && i.date <= end)
+                    .reduce((sum, i) => sum + i.total, 0);
+                const expenses = allExpenses
+                    .filter(e => e.date >= start && e.date <= end)
+                    .reduce((sum, e) => sum + e.amount, 0);
+                actual = revenue - expenses;
+            }
+
+            return {
+                id: goal.id,
+                name: goal.name,
+                type: goal.type,
+                targetAmount: goal.targetAmount,
+                startDate: goal.startDate,
+                endDate: goal.endDate,
+                actual,
+                percentage: goal.targetAmount > 0 ? (actual / goal.targetAmount) * 100 : 0,
+                remaining: Math.max(0, goal.targetAmount - actual),
+            };
+        });
+
+        return progress;
+    } catch (error) {
+        console.error("Failed to fetch goals progress:", error);
+        return [];
+    }
+}
