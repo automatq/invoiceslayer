@@ -11,9 +11,6 @@ COPY package.json package-lock.json* ./
 COPY prisma ./prisma
 RUN npm ci
 
-# Install Prisma CLI globally for migrations
-RUN npm install -g prisma
-
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
@@ -56,9 +53,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 # Copy config files if needed (usually standalone handles this, but prisma client needs schema)
 
-# Copy global npm packages (prisma CLI) from deps stage
-COPY --from=deps /usr/local/lib/node_modules /usr/local/lib/node_modules
-COPY --from=deps /usr/local/bin/prisma /usr/local/bin/prisma
+# Copy local node_modules from deps stage to ensure npx prisma works for migrations
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/package.json ./package.json
 
 USER nextjs
 
