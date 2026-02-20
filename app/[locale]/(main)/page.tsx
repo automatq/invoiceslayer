@@ -203,14 +203,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </CardContent>
           </Card>
         </Link>
-        <Link href="/pipeline" className="gradient-border pink transition-transform hover:scale-[1.02]">
+        <Link href="/pipeline" className="gradient-border red transition-transform hover:scale-[1.02]">
           <Card className="border-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
-              <Percent className="h-4 w-4 text-pink-500" />
+              <Percent className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-pink-600">{winRate}%</div>
+              <div className="text-2xl font-bold text-red-600">{winRate}%</div>
               <p className="text-xs text-muted-foreground">
                 Closed deals
               </p>
