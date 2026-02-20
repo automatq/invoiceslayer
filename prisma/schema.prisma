@@ -38,6 +38,7 @@ model Team {
   deals       Deal[]
   settingsTeam Setting[]
   profitBuckets ProfitBucket[]
+  expenseBudgets ExpenseBudget[]
 }
 
 model TeamMember {
@@ -90,6 +91,7 @@ model User {
   deals           Deal[]
   teams           TeamMember[]
   profitBuckets   ProfitBucket[]
+  expenseBudgets  ExpenseBudget[]
   createdAt       DateTime           @default(now())
 
   updatedAt DateTime @updatedAt
@@ -515,5 +517,21 @@ model ProfitBucket {
   updatedAt   DateTime @updatedAt
 
   @@index([userId])
+  @@index([teamId])
+}
+
+model ExpenseBudget {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId    String?
+  team      Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  category  String
+  amount    Float
+  period    String   @default("MONTHLY")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, category, period])
   @@index([teamId])
 }

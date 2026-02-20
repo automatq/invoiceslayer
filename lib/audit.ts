@@ -24,7 +24,8 @@ export type AuditResource =
     | "Pipeline"
     | "Deal"
     | "DocumentSignature"
-    | "ProfitBucket";
+    | "ProfitBucket"
+    | "ExpenseBudget";
 
 interface AuditEventOptions {
     action: AuditAction;

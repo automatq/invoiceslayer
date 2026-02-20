@@ -1,8 +1,11 @@
 import { Suspense } from "react";
-import { getProfitBuckets } from "@/app/actions/budget";
+import { getProfitBuckets, getBudgetPerformance } from "@/app/actions/budget";
 import { getDashboardMetrics } from "@/app/actions/reports";
+import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { ProfitAllocationOverview } from "@/components/budget/ProfitAllocationOverview";
 import { BucketList } from "@/components/budget/BucketList";
+import { CategoryBudgetList } from "@/components/budget/CategoryBudgetList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Percent, TrendingUp } from "lucide-react";
 
@@ -15,12 +18,21 @@ export default async function BudgetPage({
 }) {
     const basis = searchParams?.basis === "cash" ? "cash" : "accrual";
     const currentYear = new Date().getFullYear();
+    const session = await auth();
+    const userId = session?.user?.id;
 
-    const [buckets, metrics] = await Promise.all([
+    const [buckets, metrics, performance, uniqueCategories] = await Promise.all([
         getProfitBuckets(),
         getDashboardMetrics(currentYear, basis as "accrual" | "cash"),
+        getBudgetPerformance(),
+        prisma.expense.findMany({
+            where: { userId },
+            select: { category: true },
+            distinct: ["category"],
+        }),
     ]);
 
+    const categories = uniqueCategories.map((c: any) => c.category);
     const totalAllocated = buckets.reduce((sum: number, b: any) => sum + b.percentage, 0);
     const remainingPercentage = 100 - totalAllocated;
 
@@ -77,8 +89,9 @@ export default async function BudgetPage({
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-                <div className="col-span-4">
+                <div className="col-span-4 space-y-6">
                     <ProfitAllocationOverview buckets={buckets} netProfit={metrics.netProfit} />
+                    <CategoryBudgetList performance={performance} categories={categories} />
                 </div>
                 <div className="col-span-3">
                     <BucketList buckets={buckets} totalAllocated={totalAllocated} />
