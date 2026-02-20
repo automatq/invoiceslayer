@@ -51,10 +51,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Copy Prisma schema and migrations for runtime usage
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-# Copy config files needed for Prisma and Auth.js
+# Copy config files needed for Prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./
-COPY --from=builder --chown=nextjs:nodejs /app/auth.config.ts ./
-COPY --from=builder --chown=nextjs:nodejs /app/auth.ts ./
 
 # Copy local node_modules from deps stage to ensure npx prisma works for migrations
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
