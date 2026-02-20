@@ -32,7 +32,7 @@ model TeamMember {
   id        String   @id @default(cuid())
   teamId    String
   userId    String
-  role      UserRole @default("VIEWER")
+  role      UserRole @default(VIEWER)
   joinedAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -45,7 +45,7 @@ model Invitation {
   id        String   @id @default(cuid())
   teamId    String
   email     String
-  role      UserRole @default("VIEWER")
+  role      UserRole @default(VIEWER)
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
