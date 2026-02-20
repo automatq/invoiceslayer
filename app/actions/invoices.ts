@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createNotification } from "@/app/actions/notifications";
 import { logAuditEvent } from "@/lib/audit";
 import { auth } from "@/lib/auth";
+import { getNextSequenceNumber, calculateInvoiceTotals } from "@/lib/invoice-utils";
 
 async function getRequiredSession() {
     const session = await auth();
@@ -58,18 +59,7 @@ export async function convertQuoteToInvoice(quoteId: string) {
     }
 
     // Generate Invoice Number (per user)
-    const lastInvoice = await prisma.invoice.findFirst({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
-    });
-
-    let nextNumber = "INV-001";
-    if (lastInvoice && lastInvoice.number.startsWith("INV-")) {
-        const lastNumNum = parseInt(lastInvoice.number.split("-")[1], 10);
-        if (!isNaN(lastNumNum)) {
-            nextNumber = `INV-${String(lastNumNum + 1).padStart(3, "0")}`;
-        }
-    }
+    const nextNumber = await getNextSequenceNumber(userId, "INV");
 
     try {
         const result = await prisma.$transaction(async (tx: any) => {
@@ -231,31 +221,10 @@ export async function createInvoice(data: {
         };
     }
 
-    const items = validatedData.data.items.map(item => {
-        const amount = item.quantity * item.unitPrice;
-        const taxAmount = amount * (item.taxRate / 100);
-        return { ...item, amount, taxAmount };
-    });
+    const { items: processedItems, subtotal, taxTotal, total } = calculateInvoiceTotals(validatedData.data.items);
 
-    const subtotal = items.reduce((acc, item) => acc + item.amount, 0);
-    const taxTotal = items.reduce((acc, item) => acc + item.taxAmount, 0);
-    const total = subtotal + taxTotal;
-
-    const lastInvoice = await prisma.invoice.findFirst({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
-    });
-
-    let nextNumber = "INV-001";
-    if (lastInvoice && lastInvoice.number.startsWith("INV-")) {
-        const lastNumSplit = lastInvoice.number.split("-")[1];
-        if (lastNumSplit) {
-            const lastNumNum = parseInt(lastNumSplit, 10);
-            if (!isNaN(lastNumNum)) {
-                nextNumber = `INV-${String(lastNumNum + 1).padStart(3, "0")}`;
-            }
-        }
-    }
+    // Generate Invoice Number
+    const nextNumber = await getNextSequenceNumber(userId, "INV");
 
     try {
         const invoice = await prisma.invoice.create({
@@ -271,7 +240,7 @@ export async function createInvoice(data: {
                 subtotal: subtotal,
                 taxTotal: taxTotal,
                 items: {
-                    create: items.map((item) => ({
+                    create: processedItems.map((item) => ({
                         description: item.description,
                         quantity: item.quantity,
                         unitPrice: item.unitPrice,
@@ -351,15 +320,7 @@ export async function updateInvoice(id: string, data: {
         };
     }
 
-    const items = validatedData.data.items.map(item => {
-        const amount = item.quantity * item.unitPrice;
-        const taxAmount = amount * (item.taxRate / 100);
-        return { ...item, amount, taxAmount };
-    });
-
-    const subtotal = items.reduce((acc, item) => acc + item.amount, 0);
-    const taxTotal = items.reduce((acc, item) => acc + item.taxAmount, 0);
-    const total = subtotal + taxTotal;
+    const { items: processedItems, subtotal, taxTotal, total } = calculateInvoiceTotals(validatedData.data.items);
 
     try {
         await prisma.$transaction(async (tx: any) => {
@@ -386,7 +347,7 @@ export async function updateInvoice(id: string, data: {
             });
 
             await tx.invoiceItem.createMany({
-                data: items.map((item) => ({
+                data: processedItems.map((item) => ({
                     invoiceId: id,
                     description: item.description,
                     quantity: item.quantity,

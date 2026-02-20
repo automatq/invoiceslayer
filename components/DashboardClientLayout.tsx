@@ -20,85 +20,91 @@ export function DashboardClientLayout({
     children: React.ReactNode;
     header: React.ReactNode;
 }) {
-    const links = [
+    const groups = [
         {
-            label: "Dashboard",
-            href: "/",
-            icon: (
-                <LayoutDashboard className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-            ),
+            title: "System",
+            links: [
+                {
+                    label: "Dashboard",
+                    href: "/",
+                    icon: <LayoutDashboard className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
+                },
+            ]
         },
         {
-            label: "Pipeline",
-            href: "/pipeline",
-            icon: (
-                <Kanban className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-            ),
+            title: "Growth",
+            links: [
+                {
+                    label: "Pipeline",
+                    href: "/pipeline",
+                    icon: <Kanban className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
+                },
+                {
+                    label: "Clients",
+                    href: "/clients",
+                    icon: <UserCircle className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
+                },
+            ]
         },
         {
-            label: "Invoices",
-            href: "/invoices",
-            icon: (
-                <FileText className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-            ),
+            title: "Operations",
+            links: [
+                {
+                    label: "Invoices",
+                    href: "/invoices",
+                    icon: <FileText className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
+                },
+                {
+                    label: "Quotes",
+                    href: "/quotes",
+                    icon: <Receipt className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
+                },
+                {
+                    label: "Recurring",
+                    href: "/recurring",
+                    icon: <History className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
+                },
+                {
+                    label: "Calendar",
+                    href: "/calendar",
+                    icon: <Calendar className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
+                },
+            ]
         },
         {
-            label: "Clients",
-            href: "/clients",
-            icon: (
-                <UserCircle className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-            ),
+            title: "Accounting",
+            links: [
+                {
+                    label: "Reports",
+                    href: "/reports",
+                    icon: <ChartBar className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
+                },
+                {
+                    label: "Expenses",
+                    href: "/expenses",
+                    icon: <Wallet className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
+                },
+                {
+                    label: "Budget",
+                    href: "/budget",
+                    icon: <PieChart className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
+                },
+            ]
         },
         {
-            label: "Quotes",
-            href: "/quotes",
-            icon: (
-                <Receipt className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-            ),
-        },
-        {
-            label: "Recurring",
-            href: "/recurring",
-            icon: (
-                <History className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-            ),
-        },
-        {
-            label: "Calendar",
-            href: "/calendar",
-            icon: (
-                <Calendar className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-            ),
-        },
-        {
-            label: "Reports",
-            href: "/reports",
-            icon: (
-                <ChartBar className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-            ),
-        },
-        {
-            label: "Expenses",
-            href: "/expenses",
-            icon: (
-                <Wallet className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-            ),
-        },
-        {
-            label: "Budget",
-            href: "/budget",
-            icon: (
-                <PieChart className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-            ),
-        },
-        {
-            label: "Settings",
-            href: "/settings",
-            icon: (
-                <Settings className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-            ),
-        },
+            title: "System",
+            links: [
+                {
+                    label: "Settings",
+                    href: "/settings",
+                    icon: <Settings className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
+                },
+            ]
+        }
     ];
+
+    // Deduplicate System group if needed, but for now we'll just flatten or render with headers
+    const allLinks = groups.flatMap(g => g.links);
     const [open, setOpen] = useState(false);
     return (
         <div
@@ -110,9 +116,18 @@ export function DashboardClientLayout({
             <Sidebar open={open} setOpen={setOpen}>
                 <SidebarBody className="justify-between gap-10">
                     <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-                        <div className="mt-8 flex flex-col gap-2">
-                            {links.map((link, idx) => (
-                                <SidebarLink key={idx} link={link} />
+                        <div className="mt-8 flex flex-col gap-8">
+                            {groups.map((group, gIdx) => (
+                                <div key={gIdx} className="flex flex-col gap-2">
+                                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest px-2">
+                                        {group.title}
+                                    </h3>
+                                    <div className="flex flex-col gap-1">
+                                        {group.links.map((link, lIdx) => (
+                                            <SidebarLink key={lIdx} link={link} />
+                                        ))}
+                                    </div>
+                                </div>
                             ))}
                         </div>
                     </div>

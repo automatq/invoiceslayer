@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
 import { createNotification } from "./notifications";
 import { logDealActivity } from "./deals";
+import { getNextSequenceNumber, calculateInvoiceTotals } from "@/lib/invoice-utils";
 
 async function getRequiredSession() {
     const session = await auth();
@@ -32,33 +33,17 @@ export async function createInvoiceFromDeal(dealId: string, data: {
         if (!deal) return { success: false, message: "Deal not found" };
 
         // Generate Invoice Number
-        const lastInvoice = await prisma.invoice.findFirst({
-            where: { userId },
-            orderBy: { createdAt: "desc" },
-        });
-
-        let nextNumber = "INV-001";
-        if (lastInvoice?.number?.startsWith("INV-")) {
-            const lastNum = parseInt(lastInvoice.number.split("-")[1], 10);
-            if (!isNaN(lastNum)) {
-                nextNumber = `INV-${String(lastNum + 1).padStart(3, "0")}`;
-            }
-        }
+        const nextNumber = await getNextSequenceNumber(userId, "INV");
 
         // Use provided items or create default item from deal value
-        const invoiceItems = data.items?.length ? data.items : [{
+        const initialItems = data.items?.length ? data.items : [{
             description: data.description || deal.title,
             quantity: 1,
             unitPrice: deal.value,
             taxRate: 0,
         }];
 
-        const subtotal = invoiceItems.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
-        const taxTotal = invoiceItems.reduce((acc, item) => {
-            const amount = item.quantity * item.unitPrice;
-            return acc + (amount * ((item.taxRate || 0) / 100));
-        }, 0);
-        const total = subtotal + taxTotal;
+        const { items: processedItems, subtotal, taxTotal, total } = calculateInvoiceTotals(initialItems);
 
         const invoice = await prisma.invoice.create({
             data: {
@@ -73,13 +58,13 @@ export async function createInvoiceFromDeal(dealId: string, data: {
                 taxTotal,
                 total,
                 items: {
-                    create: invoiceItems.map(item => ({
+                    create: processedItems.map(item => ({
                         description: item.description,
                         quantity: item.quantity,
                         unitPrice: item.unitPrice,
-                        amount: item.quantity * item.unitPrice,
-                        taxRate: item.taxRate || 0,
-                        taxAmount: item.quantity * item.unitPrice * ((item.taxRate || 0) / 100),
+                        amount: item.amount,
+                        taxRate: item.taxRate,
+                        taxAmount: item.taxAmount,
                     })),
                 },
             },
@@ -133,33 +118,17 @@ export async function createQuoteFromDeal(dealId: string, data: {
         if (!deal) return { success: false, message: "Deal not found" };
 
         // Generate Quote Number
-        const lastQuote = await prisma.quote.findFirst({
-            where: { userId },
-            orderBy: { createdAt: "desc" },
-        });
-
-        let nextNumber = "Q-001";
-        if (lastQuote?.number?.startsWith("Q-")) {
-            const lastNum = parseInt(lastQuote.number.split("-")[1], 10);
-            if (!isNaN(lastNum)) {
-                nextNumber = `Q-${String(lastNum + 1).padStart(3, "0")}`;
-            }
-        }
+        const nextNumber = await getNextSequenceNumber(userId, "Q");
 
         // Use provided items or create default item from deal value
-        const quoteItems = data.items?.length ? data.items : [{
+        const initialItems = data.items?.length ? data.items : [{
             description: data.description || deal.title,
             quantity: 1,
             unitPrice: deal.value,
             taxRate: 0,
         }];
 
-        const subtotal = quoteItems.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
-        const taxTotal = quoteItems.reduce((acc, item) => {
-            const amount = item.quantity * item.unitPrice;
-            return acc + (amount * ((item.taxRate || 0) / 100));
-        }, 0);
-        const total = subtotal + taxTotal;
+        const { items: processedItems, subtotal, taxTotal, total } = calculateInvoiceTotals(initialItems);
 
         const quote = await prisma.quote.create({
             data: {
@@ -174,13 +143,13 @@ export async function createQuoteFromDeal(dealId: string, data: {
                 taxTotal,
                 total,
                 items: {
-                    create: quoteItems.map(item => ({
+                    create: processedItems.map(item => ({
                         description: item.description,
                         quantity: item.quantity,
                         unitPrice: item.unitPrice,
-                        amount: item.quantity * item.unitPrice,
-                        taxRate: item.taxRate || 0,
-                        taxAmount: item.quantity * item.unitPrice * ((item.taxRate || 0) / 100),
+                        amount: item.amount,
+                        taxRate: item.taxRate,
+                        taxAmount: item.taxAmount,
                     })),
                 },
             },
@@ -261,9 +230,9 @@ export async function syncInvoicePaymentToDeal(invoiceId: string) {
     try {
         const invoice = await prisma.invoice.findFirst({
             where: { id: invoiceId, userId },
-            include: { 
-                deal: true, 
-                payments: true 
+            include: {
+                deal: true,
+                payments: true
             },
         });
 
@@ -287,8 +256,8 @@ export async function syncInvoicePaymentToDeal(invoiceId: string) {
 
         if (isFullyPaid) {
             // Find "Paid" or "Completed" stage, or stay in Closed Won
-            const paidStage = deal.pipeline.stages.find(s => 
-                s.name.toLowerCase().includes("paid") || 
+            const paidStage = deal.pipeline.stages.find(s =>
+                s.name.toLowerCase().includes("paid") ||
                 s.name.toLowerCase().includes("completed")
             );
             if (paidStage) newStageId = paidStage.id;
@@ -308,10 +277,10 @@ export async function syncInvoicePaymentToDeal(invoiceId: string) {
         }
 
         // Log activity
-        await logDealActivity(deal.id, activityType, activityDescription, { 
-            invoiceId, 
+        await logDealActivity(deal.id, activityType, activityDescription, {
+            invoiceId,
             amountPaid: totalPaid,
-            total: invoice.total 
+            total: invoice.total
         });
 
         revalidatePath("/pipeline");
@@ -364,7 +333,7 @@ export async function getDealsWithRevenue() {
 
     return deals.map(deal => {
         const totalInvoiced = deal.invoices.reduce((sum, inv) => sum + inv.total, 0);
-        const totalPaid = deal.invoices.reduce((sum, inv) => 
+        const totalPaid = deal.invoices.reduce((sum, inv) =>
             sum + inv.payments.reduce((pSum, p) => pSum + p.amount, 0), 0
         );
         const invoiceCount = deal.invoices.length;
@@ -379,9 +348,9 @@ export async function getDealsWithRevenue() {
             totalPaid,
             invoiceCount,
             hasUnpaidInvoices,
-            paymentStatus: totalPaid >= deal.value ? "PAID" : 
-                          totalPaid > 0 ? "PARTIAL" : 
-                          invoiceCount > 0 ? "INVOICED" : "PENDING",
+            paymentStatus: totalPaid >= deal.value ? "PAID" :
+                totalPaid > 0 ? "PARTIAL" :
+                    invoiceCount > 0 ? "INVOICED" : "PENDING",
         };
     });
 }

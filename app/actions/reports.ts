@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { calculateProjectedAmount } from "@/lib/invoice-utils";
 
 async function getRequiredSession() {
     const session = await auth();
@@ -61,6 +62,9 @@ export async function getRevenueByMonth(year: number = new Date().getFullYear(),
     });
 
     const now = new Date();
+    const projectedRevenue = calculateProjectedAmount(recurringTemplates, startDate, endDate);
+
+    // Distribute projected revenue into monthlyData (simpler for monthlyData distribution)
     recurringTemplates.forEach((template: any) => {
         const items = JSON.parse(template.items);
         const subtotal = items.reduce((acc: number, item: any) => acc + (item.quantity * item.unitPrice), 0);
@@ -183,31 +187,10 @@ export async function getDashboardMetrics(year: number = new Date().getFullYear(
         where: { userId, status: "OVERDUE" }
     });
 
-    let projectedRevenue = 0;
     const recurringTemplates = await prisma.recurringInvoice.findMany({
         where: { userId, isActive: true }
     });
-
-    const now = new Date();
-    recurringTemplates.forEach((template: any) => {
-        const items = JSON.parse(template.items);
-        const subtotal = items.reduce((acc: number, item: any) => acc + (item.quantity * item.unitPrice), 0);
-        const taxTotal = items.reduce((acc: number, item: any) => acc + (item.quantity * item.unitPrice * (item.taxRate / 100)), 0);
-        const totalPerRun = subtotal + taxTotal;
-        let checkDate = new Date(template.nextRunDate);
-        let projectedRuns = template.currentOccurrence;
-
-        while (checkDate < endDate) {
-            if (template.maxOccurrences && projectedRuns >= template.maxOccurrences) break;
-            if (checkDate >= now && checkDate >= startDate) projectedRevenue += totalPerRun;
-            projectedRuns++;
-            if (template.frequency === "WEEKLY") checkDate.setDate(checkDate.getDate() + 7);
-            else if (template.frequency === "MONTHLY") checkDate.setMonth(checkDate.getMonth() + 1);
-            else if (template.frequency === "QUARTERLY") checkDate.setMonth(checkDate.getMonth() + 3);
-            else if (template.frequency === "YEARLY") checkDate.setFullYear(checkDate.getFullYear() + 1);
-            else break;
-        }
-    });
+    const projectedRevenue = calculateProjectedAmount(recurringTemplates, startDate, endDate);
 
     return {
         totalRevenue,
@@ -342,12 +325,12 @@ export async function getConversionRates() {
     for (let i = 0; i < stages.length - 1; i++) {
         const currentStage = stages[i];
         const nextStage = stages[i + 1];
-        
+
         const dealsInCurrent = currentStage.deals.length;
         const dealsInNext = nextStage.deals.length;
-        
-        const conversionRate = dealsInCurrent > 0 
-            ? (dealsInNext / dealsInCurrent) * 100 
+
+        const conversionRate = dealsInCurrent > 0
+            ? (dealsInNext / dealsInCurrent) * 100
             : 0;
 
         conversionData.push({

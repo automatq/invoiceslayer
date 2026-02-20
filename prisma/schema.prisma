@@ -307,8 +307,8 @@ model Setting {
   paymentInstructions  String?
   currency             String   @default("USD")
   defaultTaxRate       Float    @default(13)
-  invoiceTemplate      String   @default("modern")
-  quoteTemplate        String   @default("modern")
+  invoiceTemplate      String   @default("modern") // @deprecated - Use InvoiceTemplate model
+  quoteTemplate        String   @default("modern") // @deprecated - Use InvoiceTemplate model
   resendApiKey         String?
   stripePublishableKey String?
   stripeSecretKey      String?

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
+import { getNextSequenceNumber, calculateInvoiceTotals } from "@/lib/invoice-utils";
 
 async function getRequiredSession() {
     const session = await auth();
@@ -58,31 +59,10 @@ export async function createQuote(data: {
         };
     }
 
-    const items = validatedData.data.items.map(item => {
-        const amount = item.quantity * item.unitPrice;
-        const taxAmount = amount * (item.taxRate / 100);
-        return { ...item, amount, taxAmount };
-    });
+    const { items: processedItems, subtotal, taxTotal, total } = calculateInvoiceTotals(validatedData.data.items);
 
-    const subtotal = items.reduce((acc, item) => acc + item.amount, 0);
-    const taxTotal = items.reduce((acc, item) => acc + item.taxAmount, 0);
-    const total = subtotal + taxTotal;
-
-    const lastQuote = await prisma.quote.findFirst({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
-    });
-
-    let nextNumber = "QUO-001";
-    if (lastQuote && lastQuote.number.startsWith("QUO-")) {
-        const lastNumSplit = lastQuote.number.split("-")[1];
-        if (lastNumSplit) {
-            const lastNumNum = parseInt(lastNumSplit, 10);
-            if (!isNaN(lastNumNum)) {
-                nextNumber = `QUO-${String(lastNumNum + 1).padStart(3, "0")}`;
-            }
-        }
-    }
+    // Generate Quote Number
+    const nextNumber = await getNextSequenceNumber(userId, "Q");
 
     try {
         const quote = await prisma.quote.create({
@@ -97,7 +77,7 @@ export async function createQuote(data: {
                 taxTotal: taxTotal,
                 total: total,
                 items: {
-                    create: items.map((item) => ({
+                    create: processedItems.map((item) => ({
                         description: item.description,
                         quantity: item.quantity,
                         unitPrice: item.unitPrice,
@@ -158,15 +138,7 @@ export async function updateQuote(id: string, data: {
         };
     }
 
-    const items = validatedData.data.items.map(item => {
-        const amount = item.quantity * item.unitPrice;
-        const taxAmount = amount * (item.taxRate / 100);
-        return { ...item, amount, taxAmount };
-    });
-
-    const subtotal = items.reduce((acc, item) => acc + item.amount, 0);
-    const taxTotal = items.reduce((acc, item) => acc + item.taxAmount, 0);
-    const total = subtotal + taxTotal;
+    const { items: processedItems, subtotal, taxTotal, total } = calculateInvoiceTotals(validatedData.data.items);
 
     try {
         await prisma.$transaction(async (tx: any) => {
@@ -193,7 +165,7 @@ export async function updateQuote(id: string, data: {
             });
 
             await tx.quoteItem.createMany({
-                data: items.map((item) => ({
+                data: processedItems.map((item) => ({
                     quoteId: id,
                     description: item.description,
                     quantity: item.quantity,
