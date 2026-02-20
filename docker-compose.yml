@@ -24,7 +24,7 @@ services:
       # - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       # - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
     volumes:
-      - invoiceslayer-data:/app/prisma
+      - invoiceslayer-data:/app/data
     healthcheck:
       test: [ "CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health > /dev/null || exit 1" ]
       interval: 30s
@@ -42,7 +42,7 @@ services:
         - container: "3000"
           description: "Web UI"
       volumes:
-        - container: "/app/prisma"
+        - container: "/app/data"
           description: "SQLite Database Directory"
       architectures:
         - amd64
