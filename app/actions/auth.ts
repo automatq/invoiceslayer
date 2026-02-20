@@ -43,7 +43,7 @@ export async function register(formData: z.infer<typeof RegisterSchema>) {
         return { success: "User created!" };
     } catch (e) {
         console.error('[register] Error creating user:', e);
-        return { error: "Something went wrong!" };
+        return { error: e instanceof Error ? e.message : "Something went wrong!" };
     }
 }
 
