@@ -26,17 +26,18 @@ export const metadata: Metadata = {
   description: 'Self-hosted invoicing application built for ZimaOS.',
 }
 
+const CLERK_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  return (
-    <ClerkProvider>
-      <html lang="en" suppressHydrationWarning>
-        <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+  const layoutContent = (
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        {CLERK_PUBLISHABLE_KEY && (
           <header className="flex justify-end items-center p-4 gap-4 h-16">
-            {/* Show the sign-in and sign-up buttons when the user is signed out */}
             <SignedOut>
               <SignInButton />
               <SignUpButton>
@@ -45,14 +46,19 @@ export default function RootLayout({
                 </button>
               </SignUpButton>
             </SignedOut>
-            {/* Show the user button when the user is signed in */}
             <SignedIn>
               <UserButton />
             </SignedIn>
           </header>
-          <Providers>{children}</Providers>
-        </body>
-      </html>
-    </ClerkProvider>
-  )
+        )}
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+
+  if (CLERK_PUBLISHABLE_KEY) {
+    return <ClerkProvider>{layoutContent}</ClerkProvider>;
+  }
+
+  return layoutContent;
 }
