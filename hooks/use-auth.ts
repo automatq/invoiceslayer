@@ -35,7 +35,7 @@ export function useAuth() {
 
     const signOut = async (options?: { callbackUrl?: string }) => {
         if (IS_CLERK_ENABLED) {
-            await clerkSignOut({ redirectUrl: options?.callbackUrl || "/" });
+            await clerkSignOut({ redirectUrl: options?.callbackUrl || "/login" });
         } else {
             await nextAuthSignOut({ callbackUrl: options?.callbackUrl || "/login" });
         }

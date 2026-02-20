@@ -49,7 +49,7 @@ function CardWrapper({
                 <SocialLogins googleEnabled={googleEnabled} githubEnabled={githubEnabled} />
                 <div className="mt-4 text-center text-sm">
                     <span className="text-zinc-500">Don't have an account? </span>
-                    <Link href="/register" className="text-purple-400 hover:text-purple-300 font-medium transition-colors">
+                    <Link href="/onboarding" className="text-purple-400 hover:text-purple-300 font-medium transition-colors">
                         Register
                     </Link>
                 </div>
