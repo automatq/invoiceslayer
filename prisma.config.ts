@@ -2,7 +2,12 @@ import { defineConfig } from "@prisma/config";
 import "dotenv/config";
 
 const getDatabaseUrl = () => {
-    // Priority 1: Turso (production)
+    // Priority 1: Explicit DATABASE_URL (useful for local commands)
+    if (process.env.DATABASE_URL) {
+        return process.env.DATABASE_URL;
+    }
+
+    // Priority 2: Turso (production)
     const tursoUrl = process.env.TURSO_DATABASE_URL;
     const tursoToken = process.env.TURSO_AUTH_TOKEN;
 
@@ -10,11 +15,6 @@ const getDatabaseUrl = () => {
         // Strip any existing protocol if present to avoid double-prefixing
         const cleanUrl = tursoUrl.replace(/^(libsql|https|http):\/\//, "");
         return `libsql://${cleanUrl}?authToken=${tursoToken}`;
-    }
-
-    // Priority 2: Local SQLite database
-    if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith("file:")) {
-        return process.env.DATABASE_URL;
     }
 
     return "file:./prisma/dev.db";

@@ -37,6 +37,7 @@ model Team {
   pipelines   Pipeline[]
   deals       Deal[]
   settingsTeam Setting[]
+  profitBuckets ProfitBucket[]
 }
 
 model TeamMember {
@@ -88,6 +89,7 @@ model User {
   pipelines       Pipeline[]
   deals           Deal[]
   teams           TeamMember[]
+  profitBuckets   ProfitBucket[]
   createdAt       DateTime           @default(now())
 
   updatedAt DateTime @updatedAt
@@ -498,4 +500,20 @@ model AuditLog {
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
+}
+
+model ProfitBucket {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId      String?
+  team        Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  name        String
+  percentage  Float
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([teamId])
 }
