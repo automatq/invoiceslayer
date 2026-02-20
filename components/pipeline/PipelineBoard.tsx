@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { StageColumn } from "./StageColumn";
 import { DealCard } from "./DealCard";
 import { CreateDealDialog } from "./CreateDealDialog";
@@ -72,6 +72,11 @@ export function PipelineBoard({ pipeline }: PipelineBoardProps) {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
 
+    // Sync local state when server data changes (e.g., after creating a deal)
+    useEffect(() => {
+        setStages(pipeline.stages);
+    }, [pipeline.stages]);
+
     // Calculate forecast
     const forecast = stages.reduce((acc, stage) => {
         const stageValue = stage.deals.reduce((sum, deal) => sum + deal.value, 0);
@@ -91,7 +96,7 @@ export function PipelineBoard({ pipeline }: PipelineBoardProps) {
     const handleDrop = async (e: React.DragEvent, stageId: string) => {
         e.preventDefault();
         const dealId = e.dataTransfer.getData("dealId");
-        
+
         if (!dealId) return;
 
         // Optimistic update
