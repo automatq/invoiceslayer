@@ -166,17 +166,37 @@ export async function getCompanyLogo(userId?: string) {
 export async function purgeAllData() {
     const { userId } = await getRequiredSession();
     try {
+        console.log(`[Purge] Starting comprehensive data purge for user: ${userId}`);
+
+        // 1. Fetch parent IDs first (SQLite does not support nested filters in deleteMany)
+        const [invoices, quotes, deals, pipelines] = await Promise.all([
+            prisma.invoice.findMany({ where: { userId }, select: { id: true } }),
+            prisma.quote.findMany({ where: { userId }, select: { id: true } }),
+            prisma.deal.findMany({ where: { userId }, select: { id: true } }),
+            prisma.pipeline.findMany({ where: { userId }, select: { id: true } }),
+        ]);
+
+        const invoiceIds = invoices.map(i => i.id);
+        const quoteIds = quotes.map(q => q.id);
+        const dealIds = deals.map(d => d.id);
+        const pipelineIds = pipelines.map(p => p.id);
+
+        console.log(`[Purge] Collected IDs: ${invoiceIds.length} invoices, ${quoteIds.length} quotes, ${dealIds.length} deals, ${pipelineIds.length} pipelines`);
+
         await prisma.$transaction([
-            prisma.payment.deleteMany({ where: { invoice: { userId } } }),
-            prisma.invoiceItem.deleteMany({ where: { invoice: { userId } } }),
+            // Delete Children using collected IDs
+            prisma.payment.deleteMany({ where: { invoiceId: { in: invoiceIds } } }),
+            prisma.invoiceItem.deleteMany({ where: { invoiceId: { in: invoiceIds } } }),
+            prisma.quoteItem.deleteMany({ where: { quoteId: { in: quoteIds } } }),
+            prisma.dealActivity.deleteMany({ where: { dealId: { in: dealIds } } }),
+            prisma.dealNote.deleteMany({ where: { dealId: { in: dealIds } } }),
+            prisma.pipelineStage.deleteMany({ where: { pipelineId: { in: pipelineIds } } }),
+
+            // Delete Parents and Single Models
             prisma.invoice.deleteMany({ where: { userId } }),
-            prisma.quoteItem.deleteMany({ where: { quote: { userId } } }),
             prisma.quote.deleteMany({ where: { userId } }),
             prisma.recurringInvoice.deleteMany({ where: { userId } }),
-            prisma.dealActivity.deleteMany({ where: { deal: { userId } } }),
-            prisma.dealNote.deleteMany({ where: { deal: { userId } } }),
             prisma.deal.deleteMany({ where: { userId } }),
-            prisma.pipelineStage.deleteMany({ where: { pipeline: { userId } } }),
             prisma.pipeline.deleteMany({ where: { userId } }),
             prisma.client.deleteMany({ where: { userId } }),
             prisma.notification.deleteMany({ where: { userId } }),
@@ -189,12 +209,15 @@ export async function purgeAllData() {
             prisma.invoiceTemplate.deleteMany({ where: { userId } }),
         ]);
 
+        console.log(`[Purge] Transaction completed successfully for user: ${userId}`);
+
         revalidatePath("/");
         revalidatePath("/invoices");
         revalidatePath("/clients");
         revalidatePath("/quotes");
         revalidatePath("/expenses");
         revalidatePath("/recurring");
+        revalidatePath("/pipeline");
 
         await logAuditEvent({
             action: "DATA_PURGE",
@@ -202,9 +225,10 @@ export async function purgeAllData() {
             userId,
             metadata: { purgedAt: new Date().toISOString() }
         });
+
         return { success: true };
-    } catch (e) {
-        console.error("Purge failed:", e);
-        return { success: false, message: "Failed to purge data" };
+    } catch (e: any) {
+        console.error("[Purge] Critical failure:", e);
+        return { success: false, message: `Purge failed: ${e.message || "Unknown error"}` };
     }
 }
