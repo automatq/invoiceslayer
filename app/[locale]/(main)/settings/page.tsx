@@ -247,6 +247,26 @@ export default function SettingsPage() {
         }
     };
 
+    const [isSavingAi, setIsSavingAi] = useState(false);
+
+    const handleSaveAiSettings = async () => {
+        setIsSavingAi(true);
+        try {
+            const { saveLocalAiSettings } = await import("@/app/actions/ai");
+            const result = await saveLocalAiSettings(formData.localAiUrl || "", formData.localAiModel || "");
+            if (result.success) {
+                toast.success("AI Configuration Saved");
+                router.refresh();
+            } else {
+                toast.error("Failed to save AI settings", { description: result.message });
+            }
+        } catch {
+            toast.error("An unexpected error occurred");
+        } finally {
+            setIsSavingAi(false);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-64">
@@ -516,7 +536,7 @@ export default function SettingsPage() {
                 <CardHeader>
                     <CardTitle>Local AI Configuration</CardTitle>
                     <CardDescription>
-                        Connect to a locally running LLM (e.g., Ollama) for private AI features.
+                        Connect to a locally running LLM (e.g., Ollama, LM Studio) for private AI features.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -527,7 +547,7 @@ export default function SettingsPage() {
                                 id="localAiUrl"
                                 value={formData.localAiUrl}
                                 onChange={(e) => setFormData((prev) => ({ ...prev, localAiUrl: e.target.value }))}
-                                placeholder="http://localhost:11434/v1"
+                                placeholder="http://localhost:11434"
                                 className="font-mono"
                             />
                             <div className="flex flex-wrap gap-2">
@@ -535,30 +555,38 @@ export default function SettingsPage() {
                                     variant="outline"
                                     size="sm"
                                     className="text-xs"
-                                    onClick={() => setFormData(prev => ({ ...prev, localAiUrl: "http://localhost:11434/v1" }))}
+                                    onClick={() => setFormData(prev => ({ ...prev, localAiUrl: "http://localhost:11434" }))}
                                 >
-                                    Ollama (Default)
+                                    Ollama (Local)
                                 </Button>
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     className="text-xs"
-                                    onClick={() => setFormData(prev => ({ ...prev, localAiUrl: "http://host.docker.internal:11434/v1" }))}
-                                >
-                                    Ollama (Docker)
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-xs"
-                                    onClick={() => setFormData(prev => ({ ...prev, localAiUrl: "http://localhost:1234/v1" }))}
+                                    onClick={() => setFormData(prev => ({ ...prev, localAiUrl: "http://localhost:1234" }))}
                                 >
                                     LM Studio
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs"
+                                    onClick={() => setFormData(prev => ({ ...prev, localAiUrl: "http://127.0.0.1:1234" }))}
+                                >
+                                    LM Studio (Alt)
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs"
+                                    onClick={() => setFormData(prev => ({ ...prev, localAiUrl: "http://localhost:8080" }))}
+                                >
+                                    LocalAI
                                 </Button>
                             </div>
                         </div>
                         <p className="text-[0.8rem] text-muted-foreground">
-                            The base URL of your local inference server (compatible with OpenAI API).
+                            The base URL of your local inference server. OpenAI-compatible APIs are supported.
                         </p>
                     </div>
                     <div className="grid gap-2">
@@ -573,22 +601,41 @@ export default function SettingsPage() {
                             />
                             <Button
                                 variant="outline"
+                                type="button"
                                 onClick={async () => {
                                     const { testLocalAiConnection } = await import("@/app/actions/ai");
                                     const toastId = toast.loading("Testing connection...");
                                     const result = await testLocalAiConnection(formData.localAiUrl || "", formData.localAiModel || "");
 
                                     if (result.success) {
-                                        toast.success("Connection Successful", { id: toastId, description: `Server replied: "${result.data.reply}"` });
+                                        toast.success("Connection Successful", {
+                                            id: toastId,
+                                            description: `Server replied: "${result.data.reply}"`
+                                        });
                                     } else {
-                                        toast.error("Connection Failed", { id: toastId, description: result.message });
+                                        toast.error("Connection Failed", {
+                                            id: toastId,
+                                            description: result.message,
+                                            duration: 5000
+                                        });
                                     }
                                 }}
                             >
+                                <Zap className="h-4 w-4 mr-2" />
                                 Test Connection
                             </Button>
                         </div>
+                        <p className="text-[0.8rem] text-muted-foreground">
+                            Usually 'llama3', 'mistral', or the specific binary name in LM Studio.
+                        </p>
                     </div>
+                    <InteractiveButton
+                        onClick={handleSaveAiSettings}
+                        disabled={isSavingAi}
+                        className="w-full sm:w-auto"
+                    >
+                        {isSavingAi ? "Saving..." : "Save AI Configuration"}
+                    </InteractiveButton>
                 </CardContent>
             </Card>
 

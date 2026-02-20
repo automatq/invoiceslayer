@@ -19,14 +19,31 @@ async function getRequiredSession() {
     return { userId };
 }
 
+/**
+ * Normalizes the AI base URL to ensure it has the /v1 suffix if required.
+ */
+function normalizeAiUrl(url: string | null | undefined): string | null {
+    if (!url) return null;
+    let normalized = url.trim().replace(/\/$/, "");
+
+    // If it doesn't end with /v1, append it. 
+    // Most local LLM REST APIs (LM Studio, Ollama /v1, LocalAI) expect /v1/chat/completions
+    if (!normalized.endsWith("/v1")) {
+        normalized = `${normalized}/v1`;
+    }
+    return normalized;
+}
 
 /**
  * Tests the connection to the local AI by attempting to list models or run a simple prompt.
  */
 export async function testLocalAiConnection(url: string, model: string): Promise<AiResponse> {
     try {
-        console.log(`[AI] Testing connection to ${url} with model ${model}`);
-        const endpoint = `${url.replace(/\/$/, "")}/chat/completions`;
+        const baseUrl = normalizeAiUrl(url);
+        if (!baseUrl) return { success: false, message: "Invalid URL" };
+
+        console.log(`[AI] Testing connection to ${baseUrl} with model ${model}`);
+        const endpoint = `${baseUrl}/chat/completions`;
 
         const payload = {
             model: model,
@@ -34,20 +51,39 @@ export async function testLocalAiConnection(url: string, model: string): Promise
             max_tokens: 10
         };
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
         const response = await fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
+            signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             const errorText = await response.text();
             console.error("[AI] Connection failed:", response.status, errorText);
-            return { success: false, message: `Failed to connect: ${response.status} ${response.statusText}` };
+
+            // Helpful hints for common errors
+            let hint = "";
+            if (response.status === 404) hint = " - Check if the base URL and '/v1' suffix are correct.";
+            if (response.status === 401) hint = " - Authentication might be required for this endpoint.";
+
+            return {
+                success: false,
+                message: `Server returned ${response.status}: ${response.statusText}${hint}`
+            };
         }
 
         const data = await response.json();
         const reply = data.choices?.[0]?.message?.content;
+
+        if (!reply) {
+            return { success: false, message: "Connection successful, but received empty response. Check model name." };
+        }
 
         return {
             success: true,
@@ -57,7 +93,11 @@ export async function testLocalAiConnection(url: string, model: string): Promise
 
     } catch (error: any) {
         console.error("[AI] Connection error:", error);
-        return { success: false, message: `Connection error: ${error.message}` };
+        let message = `Connection error: ${error.message}`;
+        if (error.name === 'AbortError') message = "Connection timed out (10s). Is the server running?";
+        if (error.code === 'ECONNREFUSED') message = "Connection refused. Is the LLM server running on this port?";
+
+        return { success: false, message };
     }
 }
 
@@ -67,11 +107,13 @@ export async function testLocalAiConnection(url: string, model: string): Promise
 export async function saveLocalAiSettings(url: string, model: string) {
     const { userId } = await getRequiredSession();
     try {
+        // We trim and normalize before saving
+        const normalizedUrl = url.trim();
         await prisma.setting.update({
             where: { userId },
             data: {
-                localAiUrl: url,
-                localAiModel: model
+                localAiUrl: normalizedUrl,
+                localAiModel: model.trim()
             }
         });
         revalidatePath("/settings");
@@ -95,13 +137,14 @@ export async function generateText(prompt: string): Promise<string | null> {
         select: { localAiUrl: true, localAiModel: true }
     });
 
-    if (!settings?.localAiUrl || !settings?.localAiModel) {
-        console.warn("[AI] Local AI not configured.");
+    const baseUrl = normalizeAiUrl(settings?.localAiUrl);
+    if (!baseUrl || !settings?.localAiModel) {
+        console.warn("[AI] Local AI not configured properly.");
         return null;
     }
 
     try {
-        const endpoint = `${settings.localAiUrl.replace(/\/$/, "")}/chat/completions`;
+        const endpoint = `${baseUrl}/chat/completions`;
 
         const response = await fetch(endpoint, {
             method: "POST",
