@@ -9,9 +9,13 @@ export function useAuth() {
     // Auth.js
     const { data: session, status } = useSession();
 
-    // Clerk
-    const { user: clerkUser, isLoaded: isClerkLoaded } = useUser();
-    const { signOut: clerkSignOut } = useClerk();
+    // Clerk - Only call hooks if enabled to avoid "Missing ClerkProvider" error during build/sovereign mode
+    const clerkUserObj = IS_CLERK_ENABLED ? useUser() : { user: null, isLoaded: true };
+    const clerkObj = IS_CLERK_ENABLED ? useClerk() : { signOut: () => { } };
+
+    const clerkUser = (clerkUserObj as any).user;
+    const isClerkLoaded = (clerkUserObj as any).isLoaded;
+    const clerkSignOut = (clerkObj as any).signOut;
 
     const isLoading = IS_CLERK_ENABLED ? !isClerkLoaded : status === "loading";
 
