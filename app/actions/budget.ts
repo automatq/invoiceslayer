@@ -5,12 +5,16 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
 
+import { auth as clerkAuth } from "@clerk/nextjs/server";
+
 async function getRequiredSession() {
     const session = await auth();
-    if (!session?.user?.id) {
+    const { userId: clerkUserId } = await clerkAuth();
+    const userId = clerkUserId || session?.user?.id;
+    if (!userId) {
         throw new Error("Unauthorized");
     }
-    return { userId: session.user.id, session };
+    return { userId, session };
 }
 
 export type ProfitBucketFormValues = {

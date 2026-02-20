@@ -24,8 +24,11 @@ model Team {
   projects     Project[]
   quotes       Quote[]
   recurring    RecurringInvoice[]
-  settingsTeam Setting[]
-  members      TeamMember[]
+  settingsTeam    Setting[]
+  members         TeamMember[]
+  profitBuckets   ProfitBucket[]
+  expenseBudgets  ExpenseBudget[]
+  financialGoals  FinancialGoal[]
 }
 
 model TeamMember {
@@ -79,6 +82,9 @@ model User {
   sessions        Session[]
   settings        Setting?
   teams           TeamMember[]
+  profitBuckets   ProfitBucket[]
+  expenseBudgets  ExpenseBudget[]
+  financialGoals  FinancialGoal[]
 }
 
 model Account {
@@ -483,4 +489,52 @@ enum UserRole {
   ACCOUNTANT
   SALES
   VIEWER
+}
+
+model ProfitBucket {
+  id          String   @id @default(cuid())
+  name        String
+  percentage  Float
+  description String?
+  userId      String
+  teamId      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  team        Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+}
+
+model ExpenseBudget {
+  id        String   @id @default(cuid())
+  category  String
+  amount    Float
+  period    String   @default("MONTHLY")
+  userId    String
+  teamId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  team      Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category, period])
+  @@index([teamId])
+}
+
+model FinancialGoal {
+  id           String   @id @default(cuid())
+  name         String
+  targetAmount Float
+  type         String   @default("REVENUE") // REVENUE or PROFIT
+  startDate    DateTime
+  endDate      DateTime
+  userId       String
+  teamId       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  team         Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
 }
