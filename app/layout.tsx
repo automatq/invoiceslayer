@@ -27,6 +27,10 @@ export const metadata: Metadata = {
 }
 
 const CLERK_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
+
+// Only enable Clerk if BOTH keys are present at RUNTIME
+const IS_CLERK_ENABLED = !!(CLERK_PUBLISHABLE_KEY && CLERK_SECRET_KEY);
 
 export default function RootLayout({
   children,
@@ -36,7 +40,7 @@ export default function RootLayout({
   const layoutContent = (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {CLERK_PUBLISHABLE_KEY && (
+        {IS_CLERK_ENABLED && (
           <header className="flex justify-end items-center p-4 gap-4 h-16">
             <SignedOut>
               <SignInButton />
@@ -56,7 +60,7 @@ export default function RootLayout({
     </html>
   );
 
-  if (CLERK_PUBLISHABLE_KEY) {
+  if (IS_CLERK_ENABLED) {
     return <ClerkProvider>{layoutContent}</ClerkProvider>;
   }
 
