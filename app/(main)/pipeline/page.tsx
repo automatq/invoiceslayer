@@ -7,8 +7,11 @@ export const dynamic = "force-dynamic";
 
 export default async function PipelinePage() {
     // Ensure default pipeline exists
-    await createDefaultPipeline();
-    
+    const result = await createDefaultPipeline();
+    if (!result.success) {
+        console.error("Failed to create default pipeline:", result.message);
+    }
+
     const pipelines = await getPipelines();
     
     if (!pipelines || pipelines.length === 0) {
@@ -17,6 +20,9 @@ export default async function PipelinePage() {
                 <div className="text-center">
                     <h2 className="text-2xl font-bold">No Pipeline Found</h2>
                     <p className="text-muted-foreground">Create your first pipeline to get started.</p>
+                    <p className="text-sm text-red-500 mt-2">
+                        {result.success === false && result.message ? `Error: ${result.message}` : ""}
+                    </p>
                 </div>
             </div>
         );
