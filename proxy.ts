@@ -39,14 +39,13 @@ export default auth((req) => {
 
     // 0. Apply i18n middleware first (handles locale routing)
     const intlResponse = intlMiddleware(req);
-    if (intlResponse) {
-        console.log('[proxy] intlResponse status:', intlResponse.status);
-        // If i18n middleware returns a redirect or rewrite, return it
-        if (intlResponse.status !== 200) {
-            console.log('[proxy] Returning intlResponse redirect/rewrite');
-            return intlResponse;
-        }
+    if (intlResponse && intlResponse.status !== 200) {
+        console.log('[proxy] Returning intlResponse redirect/rewrite (non-200)');
+        return intlResponse;
     }
+
+    // Default response is the intlResponse (which might have a rewrite) or NextResponse.next()
+    const getBaseResponse = () => intlResponse || NextResponse.next();
 
     // 1. Cron protection
     if (CRON_ROUTES.some((route) => pathname.startsWith(route))) {
@@ -55,7 +54,7 @@ export default auth((req) => {
         if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-        return NextResponse.next();
+        return getBaseResponse();
     }
 
     // 2. Route protection
@@ -65,14 +64,14 @@ export default auth((req) => {
     const isPublicAppRoute = PUBLIC_APP_ROUTES.some((route) => pathname.includes(route));
 
     // Allow auth APIs to pass through
-    if (isAuthApi) return NextResponse.next();
+    if (isAuthApi) return getBaseResponse();
 
     // Redirect logged-in users away from login/register pages
     if (isAuthPage) {
         if (isLoggedIn) {
             return NextResponse.redirect(new URL("/", req.url));
         }
-        return NextResponse.next();
+        return getBaseResponse();
     }
 
     // Redirect unauthenticated users to login, except for public routes
@@ -84,7 +83,7 @@ export default auth((req) => {
     }
 
     // 3. Security Headers
-    const response = intlResponse || NextResponse.next();
+    const response = getBaseResponse();
     Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
         response.headers.set(key, value);
     });
