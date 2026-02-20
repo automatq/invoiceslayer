@@ -10,7 +10,7 @@ export function RecentSales({ data }: { data: any[] }) {
             {data.map((item) => (
                 <div className="flex items-center" key={item.id}>
                     <Avatar className="h-9 w-9">
-                        <AvatarImage src="/avatars/01.png" alt="Avatar" />
+                        <AvatarImage src="" alt="Avatar" />
                         <AvatarFallback>{item.fallback}</AvatarFallback>
                     </Avatar>
                     <div className="ml-4 space-y-1">

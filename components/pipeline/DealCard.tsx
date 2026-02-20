@@ -204,7 +204,7 @@ export function DealCard({ deal, stageColor, draggable, onDragStart }: DealCardP
                 {/* Client */}
                 <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">
                     <User className="w-3 h-3" />
-                    <span className="truncate">{deal.client.name}</span>
+                    <span className="truncate">{deal.client?.name || "No Client"}</span>
                 </div>
 
                 {/* Value */}

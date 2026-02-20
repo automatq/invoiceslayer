@@ -173,10 +173,20 @@ export async function purgeAllData() {
             prisma.quoteItem.deleteMany({ where: { quote: { userId } } }),
             prisma.quote.deleteMany({ where: { userId } }),
             prisma.recurringInvoice.deleteMany({ where: { userId } }),
+            prisma.dealActivity.deleteMany({ where: { deal: { userId } } }),
+            prisma.dealNote.deleteMany({ where: { deal: { userId } } }),
+            prisma.deal.deleteMany({ where: { userId } }),
+            prisma.pipelineStage.deleteMany({ where: { pipeline: { userId } } }),
+            prisma.pipeline.deleteMany({ where: { userId } }),
             prisma.client.deleteMany({ where: { userId } }),
             prisma.notification.deleteMany({ where: { userId } }),
             prisma.expense.deleteMany({ where: { userId } }),
             prisma.project.deleteMany({ where: { userId } }),
+            prisma.profitBucket.deleteMany({ where: { userId } }),
+            prisma.expenseBudget.deleteMany({ where: { userId } }),
+            prisma.financialGoal.deleteMany({ where: { userId } }),
+            prisma.auditLog.deleteMany({ where: { userId } }),
+            prisma.invoiceTemplate.deleteMany({ where: { userId } }),
         ]);
 
         revalidatePath("/");
