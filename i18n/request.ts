@@ -5,7 +5,11 @@ import { locales, type Locale } from './config';
 export default getRequestConfig(async ({ requestLocale }) => {
   // Validate that the incoming `locale` parameter is valid
   const locale = await requestLocale;
+  
+  console.log('[i18n] requestLocale:', locale);
+  
   if (!locale || !locales.includes(locale as Locale)) {
+    console.log('[i18n] Invalid locale, calling notFound()');
     notFound();
   }
  

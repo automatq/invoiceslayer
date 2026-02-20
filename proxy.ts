@@ -73,7 +73,10 @@ export default auth((req) => {
 
     // Redirect unauthenticated users to login, except for public routes
     if (!isLoggedIn && !isPublicPortalRoute && !isPublicAppRoute) {
-        return NextResponse.redirect(new URL("/login", req.url));
+        // Get locale from pathname or use default
+        const localeMatch = pathname.match(/^\/([a-z]{2})(?:\/|$)/);
+        const locale = localeMatch ? localeMatch[1] : 'en';
+        return NextResponse.redirect(new URL(`/${locale}/login`, req.url));
     }
 
     // 3. Security Headers
