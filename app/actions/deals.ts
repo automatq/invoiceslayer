@@ -120,6 +120,7 @@ export async function createDefaultPipeline() {
     if (existing) return { success: true, pipeline: existing };
 
     try {
+        console.log(`[Pipeline] Creating default pipeline for user ${userId}`);
         const pipeline = await prisma.pipeline.create({
             data: {
                 name: "Sales Pipeline",
@@ -139,8 +140,10 @@ export async function createDefaultPipeline() {
             include: { stages: true },
         });
 
+        console.log(`[Pipeline] Successfully created pipeline ${pipeline.id}`);
         return { success: true, pipeline };
     } catch (error: any) {
+        console.error(`[Pipeline] Failed to create default pipeline:`, error);
         return { success: false, message: error.message };
     }
 }

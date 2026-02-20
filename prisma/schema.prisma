@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["driverAdapters"]
@@ -10,47 +7,39 @@ datasource db {
   provider = "sqlite"
 }
 
-enum UserRole {
-  OWNER
-  ADMIN
-  ACCOUNTANT
-  SALES
-  VIEWER
-}
-
 model Team {
-  id          String       @id @default(cuid())
-  name        String
-  slug        String       @unique
-  logo        String?
-  settings    Json?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  members     TeamMember[]
-  invitations Invitation[]
-  clients     Client[]
-  invoices    Invoice[]
-  quotes      Quote[]
-  projects    Project[]
-  expenses    Expense[]
-  recurring   RecurringInvoice[]
-  pipelines   Pipeline[]
-  deals       Deal[]
-  settingsTeam Setting[]
-  profitBuckets ProfitBucket[]
+  id             String             @id @default(cuid())
+  name           String
+  slug           String             @unique
+  logo           String?
+  settings       Json?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  clients        Client[]
+  deals          Deal[]
+  expenses       Expense[]
   expenseBudgets ExpenseBudget[]
   financialGoals FinancialGoal[]
+  invitations    Invitation[]
+  invoices       Invoice[]
+  pipelines      Pipeline[]
+  profitBuckets  ProfitBucket[]
+  projects       Project[]
+  quotes         Quote[]
+  recurring      RecurringInvoice[]
+  settingsTeam   Setting[]
+  members        TeamMember[]
 }
 
 model TeamMember {
   id        String   @id @default(cuid())
   teamId    String
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   role      UserRole @default(VIEWER)
   joinedAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, userId])
 }
@@ -58,13 +47,13 @@ model TeamMember {
 model Invitation {
   id        String   @id @default(cuid())
   teamId    String
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   email     String
   role      UserRole @default(VIEWER)
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
   accepted  Boolean  @default(false)
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, email])
 }
@@ -76,27 +65,26 @@ model User {
   emailVerified   DateTime?
   image           String?
   password        String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
   accounts        Account[]
-  sessions        Session[]
-  clients         Client[]
-  invoices        Invoice[]
-  quotes          Quote[]
-  projects        Project[]
-  expenses        Expense[]
-  recurring       RecurringInvoice[]
-  settings        Setting[]
-  notifications   Notification[]
   auditLogs       AuditLog[]
-  invoiceTemplate InvoiceTemplate?
-  pipelines       Pipeline[]
+  clients         Client[]
   deals           Deal[]
-  teams           TeamMember[]
-  profitBuckets   ProfitBucket[]
+  expenses        Expense[]
   expenseBudgets  ExpenseBudget[]
   financialGoals  FinancialGoal[]
-  createdAt       DateTime           @default(now())
-
-  updatedAt DateTime @updatedAt
+  invoices        Invoice[]
+  invoiceTemplate InvoiceTemplate?
+  notifications   Notification[]
+  pipelines       Pipeline[]
+  profitBuckets   ProfitBucket[]
+  projects        Project[]
+  quotes          Quote[]
+  recurring       RecurringInvoice[]
+  sessions        Session[]
+  settings        Setting?
+  teams           TeamMember[]
 }
 
 model Account {
@@ -112,8 +100,7 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -135,7 +122,7 @@ model VerificationToken {
 }
 
 model Client {
-  id                String             @id @default(cuid())
+  id                String              @id @default(cuid())
   name              String
   email             String
   address           String?
@@ -143,21 +130,21 @@ model Client {
   vatNumber         String?
   photo             String?
   userId            String
-  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   teamId            String?
-  team              Team?              @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  invoices          Invoice[]
-  quotes            Quote[]
-  projects          Project[]
-  recurringInvoices RecurringInvoice[]
+  leadScore         Int                 @default(0)
+  lastContact       DateTime?
+  totalDealValue    Float               @default(0)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  portalToken       String?             @unique
+  team              Team?               @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   deals             Deal[]
   signatures        DocumentSignature[]
-  leadScore         Int                @default(0)
-  lastContact       DateTime?
-  totalDealValue    Float              @default(0)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  portalToken       String?            @unique
+  invoices          Invoice[]
+  projects          Project[]
+  quotes            Quote[]
+  recurringInvoices RecurringInvoice[]
 
   @@unique([userId, email])
   @@index([teamId])
@@ -168,27 +155,27 @@ model Invoice {
   number         String
   date           DateTime
   dueDate        DateTime
-  status         String          @default("DRAFT") // DRAFT, SENT, PAID, OVERDUE, CANCELLED, PARTIAL
+  status         String          @default("DRAFT")
   clientId       String
-  client         Client          @relation(fields: [clientId], references: [id])
   userId         String
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   teamId         String?
-  team           Team?           @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  items          InvoiceItem[]
   subtotal       Float           @default(0)
   taxTotal       Float           @default(0)
   total          Float
   amountPaid     Float           @default(0)
-  payments       Payment[]
   projectId      String?
-  project        Project?        @relation(fields: [projectId], references: [id])
   dealId         String?
-  deal           Deal?           @relation(fields: [dealId], references: [id])
   notes          String?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   escrowContract EscrowContract?
+  deal           Deal?           @relation(fields: [dealId], references: [id])
+  project        Project?        @relation(fields: [projectId], references: [id])
+  team           Team?           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client         Client          @relation(fields: [clientId], references: [id])
+  items          InvoiceItem[]
+  payments       Payment[]
 
   @@unique([userId, number])
   @@index([teamId])
@@ -197,14 +184,14 @@ model Invoice {
 model EscrowContract {
   id         String   @id @default(cuid())
   invoiceId  String   @unique
-  invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  platform   String // e.g., "FIGMA", "GITHUB"
-  resourceId String // URL or ID of the resource to check
-  condition  String // e.g., "APPROVED", "MERGED"
-  status     String   @default("PENDING") // PENDING, RELEASED, CANCELLED
+  platform   String
+  resourceId String
+  condition  String
+  status     String   @default("PENDING")
   amount     Float
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }
 
 model Quote {
@@ -212,24 +199,24 @@ model Quote {
   number     String
   date       DateTime
   expiryDate DateTime
-  status     String      @default("DRAFT") // DRAFT, SENT, ACCEPTED, REJECTED
+  status     String      @default("DRAFT")
   clientId   String
-  client     Client      @relation(fields: [clientId], references: [id])
   userId     String
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   teamId     String?
-  team       Team?       @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  items      QuoteItem[]
   subtotal   Float       @default(0)
   taxTotal   Float       @default(0)
   total      Float
   projectId  String?
-  project    Project?    @relation(fields: [projectId], references: [id])
   dealId     String?
-  deal       Deal?       @relation(fields: [dealId], references: [id])
   notes      String?
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
+  deal       Deal?       @relation(fields: [dealId], references: [id])
+  project    Project?    @relation(fields: [projectId], references: [id])
+  team       Team?       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client     Client      @relation(fields: [clientId], references: [id])
+  items      QuoteItem[]
 
   @@unique([userId, number])
   @@index([teamId])
@@ -238,65 +225,63 @@ model Quote {
 model InvoiceItem {
   id          String  @id @default(cuid())
   invoiceId   String
-  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   description String
   quantity    Int
   unitPrice   Float
   amount      Float
   taxRate     Float   @default(0)
   taxAmount   Float   @default(0)
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }
 
 model QuoteItem {
   id          String @id @default(cuid())
   quoteId     String
-  quote       Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
   description String
   quantity    Int
   unitPrice   Float
   amount      Float
   taxRate     Float  @default(0)
   taxAmount   Float  @default(0)
+  quote       Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
 }
 
 model Payment {
   id        String   @id @default(cuid())
   invoiceId String
-  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   amount    Float
   date      DateTime @default(now())
-  method    String   @default("E-TRANSFER") // CASH, CHEQUE, E-TRANSFER, CREDIT_CARD, OTHER
+  method    String   @default("E-TRANSFER")
   notes     String?
   createdAt DateTime @default(now())
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }
 
 model RecurringInvoice {
   id                String   @id @default(cuid())
   clientId          String
-  client            Client   @relation(fields: [clientId], references: [id])
   userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   teamId            String?
-  team              Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  items             String // JSON string of items
-  frequency         String // WEEKLY, MONTHLY, QUARTERLY, YEARLY
+  items             String
+  frequency         String
   nextRunDate       DateTime
-  maxOccurrences    Int? // NULL means infinite
+  maxOccurrences    Int?
   currentOccurrence Int      @default(0)
   isActive          Boolean  @default(true)
   notes             String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  team              Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client            Client   @relation(fields: [clientId], references: [id])
 
   @@index([teamId])
 }
 
 model Setting {
   id                   String   @id @default(cuid())
-  userId               String
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId               String   @unique
   teamId               String?
-  team                 Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   companyName          String
   companyEmail         String
   companyAddress       String?
@@ -307,8 +292,8 @@ model Setting {
   paymentInstructions  String?
   currency             String   @default("USD")
   defaultTaxRate       Float    @default(13)
-  invoiceTemplate      String   @default("modern") // @deprecated - Use InvoiceTemplate model
-  quoteTemplate        String   @default("modern") // @deprecated - Use InvoiceTemplate model
+  invoiceTemplate      String   @default("modern")
+  quoteTemplate        String   @default("modern")
   resendApiKey         String?
   stripePublishableKey String?
   stripeSecretKey      String?
@@ -318,23 +303,24 @@ model Setting {
   localAiModel         String   @default("llama3")
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+  team                 Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId])
   @@index([teamId])
 }
 
 model Notification {
   id        String   @id @default(cuid())
-  type      String // INFO, WARNING, SUCCESS, ERROR
+  type      String
   title     String
   message   String?
   read      Boolean  @default(false)
   date      DateTime @default(now())
   link      String?
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Expense {
@@ -343,15 +329,15 @@ model Expense {
   amount      Float
   date        DateTime
   category    String
-  receipt     String? // Base64 data URI
+  receipt     String?
   projectId   String?
-  project     Project? @relation(fields: [projectId], references: [id])
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   teamId      String?
-  team        Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  team        Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project     Project? @relation(fields: [projectId], references: [id])
 
   @@index([teamId])
 }
@@ -360,97 +346,94 @@ model Project {
   id          String    @id @default(cuid())
   name        String
   description String?
-  status      String    @default("ACTIVE") // ACTIVE, COMPLETED, ARCHIVED
+  status      String    @default("ACTIVE")
   clientId    String
-  client      Client    @relation(fields: [clientId], references: [id])
   userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   teamId      String?
-  team        Team?     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  invoices    Invoice[]
-  quotes      Quote[]
-  expenses    Expense[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  expenses    Expense[]
+  invoices    Invoice[]
+  team        Team?     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client      Client    @relation(fields: [clientId], references: [id])
+  quotes      Quote[]
 
   @@index([teamId])
 }
 
 model InvoiceTemplate {
   id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String   @unique
   name      String
-  color     String   @default("#0f172a") // Default slate-900
+  color     String   @default("#0f172a")
   font      String   @default("inter")
   layout    String   @default("modern")
   logoUrl   String?
   isActive  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@unique([userId])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// Pipeline CRM Models
 model Pipeline {
-  id          String          @id @default(cuid())
-  name        String
-  userId      String
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  teamId      String?
-  team        Team?           @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  stages      PipelineStage[]
-  deals       Deal[]
-  isDefault   Boolean         @default(false)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id        String          @id @default(cuid())
+  name      String
+  userId    String
+  teamId    String?
+  isDefault Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  deals     Deal[]
+  team      Team?           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stages    PipelineStage[]
 
   @@unique([userId, name])
   @@index([teamId])
 }
 
 model PipelineStage {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   pipelineId  String
-  pipeline    Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
   name        String
-  color       String    @default("#3b82f6")
+  color       String   @default("#3b82f6")
   order       Int
-  probability Float     @default(0)
+  probability Float    @default(0)
+  createdAt   DateTime @default(now())
   deals       Deal[]
-  createdAt   DateTime  @default(now())
+  pipeline    Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
 
   @@unique([pipelineId, order])
 }
 
 model Deal {
-  id            String        @id @default(cuid())
+  id            String         @id @default(cuid())
   title         String
   description   String?
   value         Float
-  currency      String        @default("USD")
+  currency      String         @default("USD")
   pipelineId    String
-  pipeline      Pipeline      @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
   stageId       String
-  stage         PipelineStage @relation(fields: [stageId], references: [id])
   clientId      String
-  client        Client        @relation(fields: [clientId], references: [id])
   userId        String
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   teamId        String?
-  team          Team?         @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  status        String        @default("OPEN") // OPEN, WON, LOST, STALE
+  status        String         @default("OPEN")
   source        String?
-  priority      String        @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  priority      String         @default("MEDIUM")
   expectedClose DateTime?
+  customFields  String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  team          Team?          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client        Client         @relation(fields: [clientId], references: [id])
+  stage         PipelineStage  @relation(fields: [stageId], references: [id])
+  pipeline      Pipeline       @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
   activities    DealActivity[]
   notes         DealNote[]
-  quotes        Quote[]
   invoices      Invoice[]
-  customFields  String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  quotes        Quote[]
 
   @@index([teamId])
 }
@@ -458,65 +441,63 @@ model Deal {
 model DealActivity {
   id          String   @id @default(cuid())
   dealId      String
-  deal        Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
-  type        String   // CALL, EMAIL, MEETING, NOTE, STAGE_CHANGE, QUOTE_SENT, INVOICE_SENT
+  type        String
   description String
   metadata    String?
   createdBy   String
   createdAt   DateTime @default(now())
+  deal        Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
 }
 
 model DealNote {
   id        String   @id @default(cuid())
   dealId    String
-  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
   content   String
   isPinned  Boolean  @default(false)
   createdBy String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
 }
 
-// E-Signature model for document signing
 model DocumentSignature {
   id            String   @id @default(cuid())
   documentId    String
-  documentType  String   // INVOICE, QUOTE, CONTRACT
+  documentType  String
   clientId      String
-  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  signatureData String   // base64 SVG/PNG
+  signatureData String
   signedAt      DateTime @default(now())
   ipAddress     String?
   userAgent     String?
-  documentHash  String   // SHA256 of document at signing
-  metadata      String?  // JSON: {name, title, company}
+  documentHash  String
+  metadata      String?
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }
 
-// SOC2 Audit Log — records all significant data operations
 model AuditLog {
   id         String   @id @default(cuid())
-  action     String // CREATE, UPDATE, DELETE, VIEW, EXPORT, SETTINGS_CHANGE, DATA_PURGE
-  resource   String // Invoice, Client, Quote, Payment, Settings, etc.
-  resourceId String? // ID of the affected record
-  actor      String   @default("system") // "system" or user identifier
+  action     String
+  resource   String
+  resourceId String?
+  actor      String   @default("system")
   ipAddress  String?
-  metadata   String? // JSON string with additional context
+  metadata   String?
   userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model ProfitBucket {
   id          String   @id @default(cuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   teamId      String?
-  team        Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   name        String
   percentage  Float
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  team        Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([teamId])
@@ -525,14 +506,14 @@ model ProfitBucket {
 model ExpenseBudget {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   teamId    String?
-  team      Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   category  String
   amount    Float
   period    String   @default("MONTHLY")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  team      Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, category, period])
   @@index([teamId])
@@ -541,17 +522,25 @@ model ExpenseBudget {
 model FinancialGoal {
   id           String   @id @default(cuid())
   userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   teamId       String?
-  team         Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   name         String
   targetAmount Float
-  type         String   @default("REVENUE") // REVENUE, PROFIT
+  type         String   @default("REVENUE")
   startDate    DateTime
   endDate      DateTime
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  team         Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([teamId])
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  ACCOUNTANT
+  SALES
+  VIEWER
 }

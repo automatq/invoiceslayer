@@ -11,6 +11,12 @@ import {
     LayoutDashboard,
     FileSpreadsheet,
     Plus,
+    Wallet,
+    PieChart,
+    Target,
+    Coins,
+    History,
+    Kanban,
 } from "lucide-react";
 
 import {
@@ -101,6 +107,13 @@ export function CommandPalette() {
                 url: `/clients/new?name=${encodeURIComponent(name)}`,
                 label: `Create Client "${name}"`,
             });
+        } else if (lowerQuery.startsWith("expense ")) {
+            const amount = lowerQuery.match(/\d+/) ? lowerQuery.match(/\d+/)?.[0] : "";
+            setSmartAction({
+                type: "expense",
+                url: `/expenses/new?amount=${amount}`,
+                label: `Add Expense ${amount ? `for $${amount}` : ""}`,
+            });
         } else {
             setSmartAction(null);
         }
@@ -121,9 +134,15 @@ export function CommandPalette() {
 
     const navigation = [
         { label: "Dashboard", icon: LayoutDashboard, url: "/" },
+        { label: "Pipeline", icon: Kanban, url: "/pipeline" },
         { label: "Invoices", icon: FileSpreadsheet, url: "/invoices" },
         { label: "Quotes", icon: FileText, url: "/quotes" },
         { label: "Clients", icon: User, url: "/clients" },
+        { label: "Recurring", icon: History, url: "/recurring" },
+        { label: "Expenses", icon: Wallet, url: "/expenses" },
+        { label: "Budget", icon: PieChart, url: "/budget" },
+        { label: "Goals", icon: Target, url: "/budget?tab=goals" },
+        { label: "Profit Allocation", icon: Coins, url: "/budget?tab=allocation" },
         { label: "Settings", icon: Settings, url: "/settings", shortcut: "⌘S" },
     ].filter(item => item.label.toLowerCase().includes(query.toLowerCase()));
 
