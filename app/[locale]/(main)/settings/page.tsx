@@ -603,21 +603,29 @@ export default function SettingsPage() {
                                 variant="outline"
                                 type="button"
                                 onClick={async () => {
-                                    const { testLocalAiConnection } = await import("@/app/actions/ai");
-                                    const toastId = toast.loading("Testing connection...");
-                                    const result = await testLocalAiConnection(formData.localAiUrl || "", formData.localAiModel || "");
+                                    const { testLocalAiConnectionClient } = await import("@/lib/ai-client");
+                                    const toastId = toast.loading("Testing connection from your browser...");
+                                    const result = await testLocalAiConnectionClient(formData.localAiUrl || "", formData.localAiModel || "");
 
                                     if (result.success) {
                                         toast.success("Connection Successful", {
                                             id: toastId,
-                                            description: `Server replied: "${result.data.reply}"`
+                                            description: `Browser reached LLM: "${result.data.reply}"`
                                         });
                                     } else {
+                                        const isNetworkError = result.message?.includes("Network error");
                                         toast.error("Connection Failed", {
                                             id: toastId,
                                             description: result.message,
-                                            duration: 5000
+                                            duration: isNetworkError ? 8000 : 5000
                                         });
+
+                                        if (isNetworkError) {
+                                            toast.info("Tip: Client-side AI requires CORS", {
+                                                description: "Ensure your LLM server (LM Studio/Ollama) allows requests from this domain.",
+                                                duration: 10000
+                                            });
+                                        }
                                     }
                                 }}
                             >
