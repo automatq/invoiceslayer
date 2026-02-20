@@ -10,7 +10,7 @@ echo "================================"
 # Check if DATABASE_URL is set
 if [ -z "$DATABASE_URL" ]; then
     echo "⚠️  Warning: DATABASE_URL not set, using default"
-    export DATABASE_URL="file:/app/prisma/dev.db"
+    export DATABASE_URL="file:/app/data/dev.db"
 fi
 
 # Ensure the database directory exists
@@ -20,9 +20,9 @@ mkdir -p "$DB_DIR"
 echo "📁 Database location: $DATABASE_URL"
 
 # Check if database file exists, if not we need to initialize it
-DB_FILE="$DB_DIR/dev.db"
+DB_FILE=$(echo "$DATABASE_URL" | sed 's/^file://')
 if [ ! -f "$DB_FILE" ]; then
-    echo "🆕 Database not found, initializing..."
+    echo "🆕 Database not found at $DB_FILE, initializing..."
     
     # Create empty database file
     touch "$DB_FILE"
