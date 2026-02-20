@@ -14,6 +14,7 @@
     "calendar": "Calendar",
     "recurring": "Recurring",
     "settings": "Settings",
+    "budget": "Budget",
     "logout": "Logout"
   },
   "auth": {
