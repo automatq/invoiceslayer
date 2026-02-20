@@ -35,11 +35,15 @@ export default auth((req) => {
     const { pathname } = req.nextUrl;
     const isLoggedIn = !!req.auth;
 
+    console.log('[proxy] pathname:', pathname, 'isLoggedIn:', isLoggedIn);
+
     // 0. Apply i18n middleware first (handles locale routing)
     const intlResponse = intlMiddleware(req);
     if (intlResponse) {
+        console.log('[proxy] intlResponse status:', intlResponse.status);
         // If i18n middleware returns a redirect or rewrite, return it
         if (intlResponse.status !== 200) {
+            console.log('[proxy] Returning intlResponse redirect/rewrite');
             return intlResponse;
         }
     }
