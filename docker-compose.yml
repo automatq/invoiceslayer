@@ -4,7 +4,7 @@ services:
   invoiceslayer:
     container_name: invoiceslayer
     build: .
-    image: invoiceslayer:latest
+    image: cb37/invoiceslayer:latest
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -26,7 +26,7 @@ services:
     volumes:
       - invoiceslayer-data:/app/prisma
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/auth/session"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/auth/session" ]
       interval: 30s
       timeout: 10s
       retries: 3
