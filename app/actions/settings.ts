@@ -5,11 +5,21 @@ import { revalidatePath } from "next/cache";
 import { unstable_noStore as noStore } from "next/cache";
 import { logAuditEvent } from "@/lib/audit";
 import { auth } from "@/lib/auth";
-import { auth as clerkAuth } from "@clerk/nextjs/server";
+import { auth as clerkAuth, currentUser } from "@clerk/nextjs/server";
 
 async function getRequiredSession() {
     const session = await auth();
-    const { userId: clerkUserId } = await clerkAuth();
+
+    let clerkUserId: string | null = null;
+    if (process.env.CLERK_SECRET_KEY) {
+        try {
+            const clerkRes = await clerkAuth();
+            clerkUserId = clerkRes.userId;
+        } catch (e) {
+            console.error("Clerk auth error:", e);
+        }
+    }
+
     const userId = clerkUserId || session?.user?.id;
     if (!userId) {
         throw new Error("Unauthorized");
@@ -20,7 +30,17 @@ async function getRequiredSession() {
 async function getOptionalSession(userId?: string) {
     if (userId) return userId;
     const session = await auth();
-    const { userId: clerkUserId } = await clerkAuth();
+
+    let clerkUserId: string | null = null;
+    if (process.env.CLERK_SECRET_KEY) {
+        try {
+            const clerkRes = await clerkAuth();
+            clerkUserId = clerkRes.userId;
+        } catch (e) {
+            console.error("Clerk auth error:", e);
+        }
+    }
+
     return clerkUserId || session?.user?.id || null;
 }
 
@@ -49,6 +69,31 @@ export async function createSettings(data: SettingsFormValues) {
     const { userId } = await getRequiredSession();
     try {
         console.log("Creating settings for user:", userId, "data:", data);
+
+        // Ensure user exists in the local database (Requirement for foreign key in Setting model)
+        const userExists = await prisma.user.findUnique({ where: { id: userId } });
+        if (!userExists) {
+            console.log("Creating shadow user for:", userId);
+            let email = data.companyEmail || `${userId}@placeholder.com`;
+            let name = data.companyName || "Clerk User";
+
+            // If it's a Clerk user, try to get their actual email/name from Clerk
+            if (userId.startsWith("user_") && process.env.CLERK_SECRET_KEY) {
+                const clerkUser = await currentUser();
+                if (clerkUser) {
+                    email = clerkUser.emailAddresses[0]?.emailAddress || email;
+                    name = `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || name;
+                }
+            }
+
+            await prisma.user.create({
+                data: {
+                    id: userId,
+                    email,
+                    name,
+                }
+            });
+        }
 
         if (!data.companyName || !data.companyEmail) {
             return { success: false, message: "Company name and email are required" };

@@ -46,6 +46,7 @@ interface OnboardingWizardProps {
     isCloudDeployment: boolean;
     googleEnabled: boolean;
     githubEnabled: boolean;
+    isClerkEnabled: boolean;
     hasSettings?: boolean;
 }
 
@@ -227,7 +228,7 @@ function SetupChecklist({ isCloud }: { isCloud: boolean }) {
     );
 }
 
-export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabled, hasSettings }: OnboardingWizardProps) {
+export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabled, isClerkEnabled, hasSettings }: OnboardingWizardProps) {
     const router = useRouter();
     const { user, status: authStatus, isClerk } = useAuth();
     const nextAuthStatus = authStatus === "authenticated" ? "authenticated" : (authStatus === "loading" ? "loading" : "unauthenticated");
@@ -403,7 +404,8 @@ export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabl
 
     if (!mounted) return null; // Avoid hydration mismatch
 
-    const showOAuth = isCloudDeployment && (googleEnabled || githubEnabled);
+    const showOAuth = isCloudDeployment && (googleEnabled || githubEnabled) && !isClerkEnabled;
+    const loginLink = isClerkEnabled ? "/sign-in" : "/login";
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-neutral-950 p-4 font-sans selection:bg-primary/30">
@@ -523,7 +525,7 @@ export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabl
                             </form>
                         )}
                         <CardFooter className="justify-center pb-8 pt-0">
-                            <p className="text-xs font-bold text-white/30 italic">Already have an account? <Link href="/login" className="text-purple-400 hover:underline">Log In</Link></p>
+                            <p className="text-xs font-bold text-white/30 italic">Already have an account? <Link href={loginLink} className="text-purple-400 hover:underline">Log In</Link></p>
                         </CardFooter>
                     </Card>
                 )}

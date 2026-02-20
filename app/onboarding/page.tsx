@@ -41,6 +41,7 @@ export default async function OnboardingPage() {
             isCloudDeployment={isCloudDeployment}
             googleEnabled={googleEnabled}
             githubEnabled={githubEnabled}
+            isClerkEnabled={isClerkEnabled}
             hasSettings={!!settings}
         />
     );
