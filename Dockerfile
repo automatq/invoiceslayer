@@ -54,8 +54,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 # Copy config files if needed (usually standalone handles this, but prisma client needs schema)
 
 # Copy local node_modules from deps stage to ensure npx prisma works for migrations
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/package.json ./package.json
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=deps --chown=nextjs:nodejs /app/package.json ./package.json
 
 USER nextjs
 
