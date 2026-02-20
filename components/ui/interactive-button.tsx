@@ -30,9 +30,10 @@ export const InteractiveButton = React.forwardRef<HTMLButtonElement, Interactive
     const isSubtle = isIcon || isGhost;
 
     const commonClasses = cn(
-        buttonVariants({ variant, size, className }),
-        "group relative inline-flex items-center justify-center gap-2 overflow-hidden isolation-isolate",
-        !isSubtle && "border border-white/10 dark:border-white/10 bg-slate-950 dark:bg-black text-white shadow-lg shadow-black/20"
+        "group relative inline-flex items-center justify-center gap-2 overflow-hidden isolation-isolate transition-all duration-300",
+        buttonVariants({ variant, size }),
+        !isSubtle && "border border-white/10 dark:border-white/20 shadow-lg shadow-black/20",
+        className
     );
 
     const commonStyle = !isSubtle ? {
@@ -49,8 +50,8 @@ export const InteractiveButton = React.forwardRef<HTMLButtonElement, Interactive
             {/* Backdrop Layer */}
             <div
                 className={cn(
-                    "absolute inset-[1.5px] -z-10 rounded-[calc(var(--radius)-1.5px)] bg-slate-950 dark:bg-black pointer-events-none",
-                    "transition-colors duration-300 group-hover:bg-slate-900 dark:group-hover:bg-zinc-900 shadow-lg"
+                    "absolute inset-[1.5px] -z-10 rounded-[calc(var(--radius)-1.5px)] pointer-events-none bg-inherit",
+                    "transition-colors duration-300 group-hover:brightness-110 shadow-lg"
                 )}
             />
         </>

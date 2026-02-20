@@ -60,7 +60,7 @@ export function RegisterForm({ googleEnabled, githubEnabled }: RegisterFormProps
                 }
                 if (data?.success) {
                     toast.success(data.success);
-                    router.push("/login");
+                    // Automatic sign-in handles redirect
                 }
             });
         });

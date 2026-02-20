@@ -39,9 +39,18 @@ export async function register(formData: z.infer<typeof RegisterSchema>) {
             },
         });
 
-        // After registration, we can sign them in or redirect to login
+        // Automatically sign in the user after registration
+        await signIn("credentials", {
+            email,
+            password,
+            redirectTo: "/onboarding",
+        });
+
         return { success: "User created!" };
     } catch (e) {
+        if (e instanceof AuthError) {
+            return { error: "Something went wrong during sign in." };
+        }
         console.error('[register] Error creating user:', e);
         return { error: "Something went wrong!" };
     }
