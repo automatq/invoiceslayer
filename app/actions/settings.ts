@@ -126,6 +126,62 @@ export async function createSettings(data: SettingsFormValues) {
             create: { ...createData, userId }
         });
 
+        // Initialize default Team and Pipeline for fresh users
+        const existingTeam = await prisma.teamMember.findFirst({
+            where: { userId }
+        });
+
+        if (!existingTeam) {
+            console.log(`[createSettings] Initializing fresh account for user: ${userId}`);
+
+            // Generate a slug from company name
+            let slug = data.companyName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+            if (!slug) slug = `team-${userId.slice(-5)}`;
+
+            // Ensure unique slug
+            const slugExists = await prisma.team.findUnique({ where: { slug } });
+            if (slugExists) slug = `${slug}-${Math.random().toString(36).substring(2, 5)}`;
+
+            const team = await prisma.team.create({
+                data: {
+                    name: data.companyName,
+                    slug,
+                    members: {
+                        create: {
+                            userId,
+                            role: "OWNER"
+                        }
+                    }
+                }
+            });
+
+            // Create default "Main Pipeline" with stages
+            await prisma.pipeline.create({
+                data: {
+                    name: "Main Pipeline",
+                    userId,
+                    teamId: team.id,
+                    isDefault: true,
+                    stages: {
+                        create: [
+                            { name: "Lead", order: 1, color: "#3b82f6", probability: 10 },
+                            { name: "Contacted", order: 2, color: "#f59e0b", probability: 30 },
+                            { name: "Proposal", order: 3, color: "#8b5cf6", probability: 60 },
+                            { name: "Negotiation", order: 4, color: "#ec4899", probability: 80 },
+                            { name: "Won", order: 5, color: "#10b981", probability: 100 },
+                            { name: "Lost", order: 6, color: "#ef4444", probability: 0 },
+                        ]
+                    }
+                }
+            });
+
+            // Link team to settings
+            await prisma.setting.update({
+                where: { userId },
+                data: { teamId: team.id }
+            });
+        }
+
         revalidatePath("/settings");
         await logAuditEvent({ action: "SETTINGS_CHANGE", resource: "Settings", userId });
         return { success: true };

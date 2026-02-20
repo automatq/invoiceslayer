@@ -31,11 +31,6 @@ export default async function OnboardingPage() {
         redirect("/");
     }
 
-    // If no active session for the current mode, redirect to login
-    if (!activeSession) {
-        redirect("/login");
-    }
-
     return (
         <OnboardingWizard
             isCloudDeployment={isCloudDeployment}
