@@ -44,7 +44,7 @@ export async function createProfitBucket(data: ProfitBucketFormValues) {
     try {
         // Basic validation: ensure total percentage doesn't exceed 100%
         const existingBuckets = await getProfitBuckets(data.teamId);
-        const totalPercentage = existingBuckets.reduce((sum, b) => sum + b.percentage, 0);
+        const totalPercentage = existingBuckets.reduce((sum: number, b: any) => sum + b.percentage, 0);
 
         if (totalPercentage + data.percentage > 100) {
             return {
@@ -80,8 +80,8 @@ export async function updateProfitBucket(id: string, data: Partial<ProfitBucketF
     try {
         if (data.percentage !== undefined) {
             const existingBuckets = await getProfitBuckets(data.teamId);
-            const otherBuckets = existingBuckets.filter(b => b.id !== id);
-            const totalOther = otherBuckets.reduce((sum, b) => sum + b.percentage, 0);
+            const otherBuckets = existingBuckets.filter((b: any) => b.id !== id);
+            const totalOther = otherBuckets.reduce((sum: number, b: any) => sum + b.percentage, 0);
 
             if (totalOther + data.percentage > 100) {
                 return {
