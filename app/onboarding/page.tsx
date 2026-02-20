@@ -8,7 +8,13 @@ import { auth as clerkAuth } from "@clerk/nextjs/server";
 
 export default async function OnboardingPage() {
     const session = await auth();
-    const { userId: clerkUserId } = await clerkAuth();
+
+    // Guard Clerk auth call – only attempt if key is present to avoid crash in "sovereign" mode
+    let clerkUserId: string | null = null;
+    if (process.env.CLERK_SECRET_KEY) {
+        const clerkRes = await clerkAuth();
+        clerkUserId = clerkRes.userId;
+    }
     const settings = await getSettings();
 
     const googleEnabled = !!(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
@@ -35,7 +41,6 @@ export default async function OnboardingPage() {
             isCloudDeployment={isCloudDeployment}
             googleEnabled={googleEnabled}
             githubEnabled={githubEnabled}
-            initialSession={isClerkEnabled ? null : session} // Only pass NextAuth session if Clerk is disabled
             hasSettings={!!settings}
         />
     );

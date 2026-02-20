@@ -17,9 +17,8 @@ import { CheckCircle2, ArrowRight, Server, Cloud, Mail, CreditCard, Bot, Zap, Ch
 import Link from "next/link";
 import { InteractiveButton } from "@/components/ui/interactive-button";
 import { Button } from "@/components/ui/button";
-import { useSession, signIn } from "next-auth/react";
-import { useUser } from "@clerk/nextjs";
-import { Session } from "next-auth";
+import { signIn } from "next-auth/react";
+import { useAuth } from "@/hooks/use-auth";
 import { SocialLogins } from "@/components/SocialLogins";
 
 const SettingsSchema = z.object({
@@ -47,7 +46,6 @@ interface OnboardingWizardProps {
     isCloudDeployment: boolean;
     googleEnabled: boolean;
     githubEnabled: boolean;
-    initialSession?: Session | null;
     hasSettings?: boolean;
 }
 
@@ -229,10 +227,12 @@ function SetupChecklist({ isCloud }: { isCloud: boolean }) {
     );
 }
 
-export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabled, initialSession, hasSettings }: OnboardingWizardProps) {
+export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabled, hasSettings }: OnboardingWizardProps) {
     const router = useRouter();
-    const { data: session, status: nextAuthStatus } = useSession();
-    const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
+    const { user, status: authStatus, isClerk } = useAuth();
+    const nextAuthStatus = authStatus === "authenticated" ? "authenticated" : (authStatus === "loading" ? "loading" : "unauthenticated");
+    const clerkUser = isClerk ? user : null;
+    const clerkLoaded = true; // Handled by useAuth internally
     const [mounted, setMounted] = useState(false);
 
     // Use sessionStorage to persist step across refreshes during the onboarding process
@@ -241,10 +241,8 @@ export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabl
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const isLoggedIn = isCloudDeployment
-        ? !!clerkUser
-        : (nextAuthStatus === "authenticated" && !!session?.user) || (!!initialSession?.user);
-    const isAuthLoading = isCloudDeployment ? !clerkLoaded : nextAuthStatus === "loading";
+    const isLoggedIn = !!user;
+    const isAuthLoading = authStatus === "loading";
 
     // Determine total steps based on deployment type
     // Both flows have 3 main steps: Welcome → Auth → Profile → Success (step 3 is completion)

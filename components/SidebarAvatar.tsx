@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { getSettings } from "@/app/actions/settings";
 import { SidebarLink } from "@/components/ui/sidebar";
 import { UserCircle } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/hooks/use-auth";
 
 export function SidebarAvatar() {
-    const { data: session } = useSession();
+    const { user } = useAuth();
     const [name, setName] = useState("Loading...");
     const [logo, setLogo] = useState<string | null>(null);
 
@@ -15,16 +15,16 @@ export function SidebarAvatar() {
         async function load() {
             const settings = await getSettings();
             if (settings) {
-                setName(settings.companyName || session?.user?.name || session?.user?.email || "My Company");
+                setName(settings.companyName || user?.name || user?.email || "My Company");
                 if (settings.companyLogo) {
                     setLogo(settings.companyLogo);
                 }
-            } else if (session?.user) {
-                setName(session.user.name || session.user.email || "My Account");
+            } else if (user) {
+                setName(user.name || user.email || "My Account");
             }
         }
         load();
-    }, [session]);
+    }, [user]);
 
     return (
         <SidebarLink
