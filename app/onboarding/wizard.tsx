@@ -18,6 +18,7 @@ import Link from "next/link";
 import { InteractiveButton } from "@/components/ui/interactive-button";
 import { Button } from "@/components/ui/button";
 import { useSession, signIn } from "next-auth/react";
+import { useUser } from "@clerk/nextjs";
 import { Session } from "next-auth";
 import { SocialLogins } from "@/components/SocialLogins";
 
@@ -230,7 +231,8 @@ function SetupChecklist({ isCloud }: { isCloud: boolean }) {
 
 export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabled, initialSession, hasSettings }: OnboardingWizardProps) {
     const router = useRouter();
-    const { data: session, status } = useSession();
+    const { data: session, status: nextAuthStatus } = useSession();
+    const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
     const [mounted, setMounted] = useState(false);
 
     // Use sessionStorage to persist step across refreshes during the onboarding process
@@ -238,7 +240,11 @@ export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabl
     const [step, setStep] = useState<number>(0);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const isLoggedIn = status === "authenticated" || !!initialSession;
+
+    const isLoggedIn = isCloudDeployment
+        ? !!clerkUser
+        : (nextAuthStatus === "authenticated" && !!session?.user) || (!!initialSession?.user);
+    const isAuthLoading = isCloudDeployment ? !clerkLoaded : nextAuthStatus === "loading";
 
     // Determine total steps based on deployment type
     // Both flows have 3 main steps: Welcome → Auth → Profile → Success (step 3 is completion)
@@ -286,19 +292,21 @@ export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabl
 
     // Automatically advance from Auth (Step 1) to Profile (Step 2) if login is detected
     useEffect(() => {
-        if (status === "loading") return;
+        if (isAuthLoading) return;
         if (step === 1 && isLoggedIn) {
+            console.log("[wizard] User logged in, advancing to Profile step");
             setStep(2);
         }
-    }, [step, isLoggedIn, status]);
+    }, [step, isLoggedIn, isAuthLoading]);
 
     // If user is already logged in when landing on onboarding, skip to Profile step
     useEffect(() => {
-        if (status === "loading") return;
+        if (isAuthLoading) return;
         if (step === 0 && isLoggedIn && mounted) {
+            console.log("[wizard] User already logged in on mount, advancing to Profile step");
             setStep(2);
         }
-    }, [status, isLoggedIn, mounted, step]);
+    }, [isAuthLoading, isLoggedIn, mounted, step]);
 
     const {
         register,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useAuth } from "@/hooks/use-auth";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -12,20 +12,25 @@ import {
 import { InteractiveButton } from "@/components/ui/interactive-button";
 import { User, LogOut, Settings } from "lucide-react";
 import Link from "next/link";
+import { UserButton as ClerkUserButton } from "@clerk/nextjs";
 
 export function UserButton() {
-    const { data: session } = useSession();
+    const { user, signOut, isClerk } = useAuth();
 
-    if (!session?.user) return null;
+    if (!user) return null;
+
+    if (isClerk) {
+        return <ClerkUserButton afterSignOutUrl="/" />;
+    }
 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <InteractiveButton variant="ghost" size="icon" className="rounded-full">
-                    {session.user.image ? (
+                    {user.image ? (
                         <img
-                            src={session.user.image}
-                            alt={session.user.name || "User"}
+                            src={user.image}
+                            alt={user.name || "User"}
                             className="h-5 w-5 rounded-full"
                         />
                     ) : (
@@ -36,8 +41,8 @@ export function UserButton() {
             <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{session.user.name}</p>
-                        <p className="text-xs leading-none text-muted-foreground">{session.user.email}</p>
+                        <p className="text-sm font-medium leading-none">{user.name}</p>
+                        <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />

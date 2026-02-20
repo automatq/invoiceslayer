@@ -8,34 +8,31 @@ datasource db {
 }
 
 model Team {
-  id             String             @id @default(cuid())
-  name           String
-  slug           String             @unique
-  logo           String?
-  settings       Json?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  clients        Client[]
-  deals          Deal[]
-  expenses       Expense[]
-  expenseBudgets ExpenseBudget[]
-  financialGoals FinancialGoal[]
-  invitations    Invitation[]
-  invoices       Invoice[]
-  pipelines      Pipeline[]
-  profitBuckets  ProfitBucket[]
-  projects       Project[]
-  quotes         Quote[]
-  recurring      RecurringInvoice[]
-  settingsTeam   Setting[]
-  members        TeamMember[]
+  id           String             @id @default(cuid())
+  name         String
+  slug         String             @unique
+  logo         String?
+  settings     Json?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  clients      Client[]
+  deals        Deal[]
+  expenses     Expense[]
+  invitations  Invitation[]
+  invoices     Invoice[]
+  pipelines    Pipeline[]
+  projects     Project[]
+  quotes       Quote[]
+  recurring    RecurringInvoice[]
+  settingsTeam Setting[]
+  members      TeamMember[]
 }
 
 model TeamMember {
   id        String   @id @default(cuid())
   teamId    String
   userId    String
-  role      UserRole @default(VIEWER)
+  role      UserRole @default("VIEWER")
   joinedAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -48,7 +45,7 @@ model Invitation {
   id        String   @id @default(cuid())
   teamId    String
   email     String
-  role      UserRole @default(VIEWER)
+  role      UserRole @default("VIEWER")
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
@@ -72,13 +69,10 @@ model User {
   clients         Client[]
   deals           Deal[]
   expenses        Expense[]
-  expenseBudgets  ExpenseBudget[]
-  financialGoals  FinancialGoal[]
   invoices        Invoice[]
   invoiceTemplate InvoiceTemplate?
   notifications   Notification[]
   pipelines       Pipeline[]
-  profitBuckets   ProfitBucket[]
   projects        Project[]
   quotes          Quote[]
   recurring       RecurringInvoice[]
@@ -229,8 +223,6 @@ model InvoiceItem {
   quantity    Int
   unitPrice   Float
   amount      Float
-  taxRate     Float   @default(0)
-  taxAmount   Float   @default(0)
   invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }
 
@@ -241,8 +233,6 @@ model QuoteItem {
   quantity    Int
   unitPrice   Float
   amount      Float
-  taxRate     Float  @default(0)
-  taxAmount   Float  @default(0)
   quote       Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
 }
 
@@ -485,56 +475,6 @@ model AuditLog {
   userId     String
   createdAt  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model ProfitBucket {
-  id          String   @id @default(cuid())
-  userId      String
-  teamId      String?
-  name        String
-  percentage  Float
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  team        Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([teamId])
-}
-
-model ExpenseBudget {
-  id        String   @id @default(cuid())
-  userId    String
-  teamId    String?
-  category  String
-  amount    Float
-  period    String   @default("MONTHLY")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  team      Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, category, period])
-  @@index([teamId])
-}
-
-model FinancialGoal {
-  id           String   @id @default(cuid())
-  userId       String
-  teamId       String?
-  name         String
-  targetAmount Float
-  type         String   @default("REVENUE")
-  startDate    DateTime
-  endDate      DateTime
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  team         Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([teamId])
 }
 
 enum UserRole {

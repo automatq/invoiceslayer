@@ -5,13 +5,23 @@ import { revalidatePath } from "next/cache";
 import { unstable_noStore as noStore } from "next/cache";
 import { logAuditEvent } from "@/lib/audit";
 import { auth } from "@/lib/auth";
+import { auth as clerkAuth } from "@clerk/nextjs/server";
 
 async function getRequiredSession() {
     const session = await auth();
-    if (!session?.user?.id) {
+    const { userId: clerkUserId } = await clerkAuth();
+    const userId = clerkUserId || session?.user?.id;
+    if (!userId) {
         throw new Error("Unauthorized");
     }
-    return { userId: session.user.id, session };
+    return { userId, session };
+}
+
+async function getOptionalSession(userId?: string) {
+    if (userId) return userId;
+    const session = await auth();
+    const { userId: clerkUserId } = await clerkAuth();
+    return clerkUserId || session?.user?.id || null;
 }
 
 export type SettingsFormValues = {
@@ -39,13 +49,11 @@ export async function createSettings(data: SettingsFormValues) {
     const { userId } = await getRequiredSession();
     try {
         console.log("Creating settings for user:", userId, "data:", data);
-        
-        // Ensure required fields are present
+
         if (!data.companyName || !data.companyEmail) {
             return { success: false, message: "Company name and email are required" };
         }
-        
-        // Convert empty strings to null for optional fields
+
         const createData = {
             companyName: data.companyName,
             companyEmail: data.companyEmail,
@@ -66,22 +74,15 @@ export async function createSettings(data: SettingsFormValues) {
             localAiUrl: data.localAiUrl || "http://localhost:11434/v1",
             localAiModel: data.localAiModel || "llama3",
         };
-        
+
         await prisma.setting.upsert({
             where: { userId },
             update: createData,
-            create: {
-                ...createData,
-                userId
-            }
+            create: { ...createData, userId }
         });
-        
+
         revalidatePath("/settings");
-        await logAuditEvent({
-            action: "SETTINGS_CHANGE",
-            resource: "Settings",
-            userId
-        });
+        await logAuditEvent({ action: "SETTINGS_CHANGE", resource: "Settings", userId });
         return { success: true };
     } catch (e: any) {
         console.error("Settings save error:", e);
@@ -92,19 +93,9 @@ export async function createSettings(data: SettingsFormValues) {
 export async function getSettings(userId?: string) {
     noStore();
     try {
-        let finalUserId = userId;
-
-        if (!finalUserId) {
-            const session = await auth();
-            if (!session?.user?.id) return null;
-            finalUserId = session.user.id;
-        }
-
-        const settings = await prisma.setting.findUnique({
-            where: { userId: finalUserId }
-        });
-
-        return settings;
+        const finalUserId = await getOptionalSession(userId);
+        if (!finalUserId) return null;
+        return await prisma.setting.findUnique({ where: { userId: finalUserId } });
     } catch (e) {
         console.error("Error getting settings:", e);
         return null;
@@ -114,14 +105,8 @@ export async function getSettings(userId?: string) {
 export async function getCompanyLogo(userId?: string) {
     noStore();
     try {
-        let finalUserId = userId;
-
-        if (!finalUserId) {
-            const session = await auth();
-            if (!session?.user?.id) return null;
-            finalUserId = session.user.id;
-        }
-
+        const finalUserId = await getOptionalSession(userId);
+        if (!finalUserId) return null;
         const settings = await prisma.setting.findUnique({
             where: { userId: finalUserId },
             select: { companyLogo: true }
