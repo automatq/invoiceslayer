@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "title": "InvoiceSlayer - Rechnungs- und Pipeline-Management",
+    "description": "Moderne Rechnungsstellung mit integriertem Pipeline-CRM"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "invoices": "Rechnungen",
+    "quotes": "Angebote",
+    "clients": "Kunden",
+    "pipeline": "Pipeline",
+    "expenses": "Ausgaben",
+    "reports": "Berichte",
+    "calendar": "Kalender",
+    "recurring": "Wiederkehrend",
+    "settings": "Einstellungen",
+    "logout": "Abmelden"
+  },
+  "auth": {
+    "login": "Anmelden",
+    "register": "Registrieren",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "name": "Name",
+    "forgotPassword": "Passwort vergessen?",
+    "noAccount": "Noch kein Konto?",
+    "hasAccount": "Bereits ein Konto?",
+    "loginError": "Ungültige E-Mail oder Passwort",
+    "registerError": "Konto konnte nicht erstellt werden"
+  },
+  "common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "create": "Erstellen",
+    "search": "Suchen",
+    "loading": "Laden...",
+    "error": "Fehler",
+    "success": "Erfolg"
+  }
+}
