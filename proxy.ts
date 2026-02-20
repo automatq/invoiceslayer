@@ -35,29 +35,30 @@ export default auth((req) => {
     const { pathname } = req.nextUrl;
     const isLoggedIn = !!req.auth;
 
-    // 0. Handle Public Assets & Static Files first (though matcher should exclude them)
-    if (pathname.includes('.') || pathname.startsWith('/_next')) {
-        return NextResponse.next();
-    }
-
-    console.log(`[middleware] Processing ${pathname} (Logged In: ${isLoggedIn})`);
-
     // 1. Handle Auth APIs (MUST NOT be localized)
-    const isAuthApi = pathname.startsWith("/api/auth");
-    if (isAuthApi) {
-        return NextResponse.next();
+    if (pathname.startsWith("/api/auth")) {
+        return;
     }
 
-    // 2. Apply i18n middleware
+    // 2. Extract locale for manual propagation
+    // This ensures that even if intlMiddleware fails to set headers (e.g. on redirects),
+    // we have a fallback for the rendering layer.
+    const localeMatch = pathname.match(/^\/([a-z]{2})(?:\/|$)/);
+    const locale = localeMatch ? localeMatch[1] : 'en';
+
+    // 3. Apply i18n middleware
     const response = intlMiddleware(req);
 
-    // If intlMiddleware redirects, return immediately
+    // Manually ensure the locale header is present for the rendering layer
+    response.headers.set('x-next-intl-locale', locale);
+
+    // 4. If intlMiddleware wants a redirect (e.g. adding missing locale), honor it
     if (response.status >= 300 && response.status < 400) {
-        console.log(`[proxy] i18n Redirect: ${response.status} to ${response.headers.get('location')}`);
+        console.log(`[proxy] i18n redirect to ${response.headers.get('location')}`);
         return response;
     }
 
-    // 3. Cron Protection (Return 401 directly if fails)
+    // 5. Cron Protection
     if (CRON_ROUTES.some((route) => pathname.includes(route))) {
         const cronSecret = process.env.CRON_SECRET;
         const authHeader = req.headers.get("authorization");
@@ -66,31 +67,38 @@ export default auth((req) => {
         }
     }
 
-    // 4. Route Protection Logic
+    // 6. Route Protection Logic
     const isAuthPage = AUTH_PAGES.some((page) => pathname.includes(page));
     const isPublicPortalRoute = PUBLIC_PORTAL_ROUTES.some((route) => pathname.includes(route));
     const isPublicAppRoute = PUBLIC_APP_ROUTES.some((route) => pathname.includes(route));
 
-    // Handle protected routes
-    if (!isLoggedIn && !isAuthPage && !isAuthApi && !isPublicPortalRoute && !isPublicAppRoute) {
-        const localeMatch = pathname.match(/^\/([a-z]{2})(?:\/|$)/);
-        const locale = localeMatch ? localeMatch[1] : 'en';
-        console.log(`[proxy] Unauthenticated access to ${pathname}, redirecting to /${locale}/login`);
-        return NextResponse.redirect(new URL(`/${locale}/login`, req.url));
+    // Protected Route Handling
+    if (!isLoggedIn && !isAuthPage && !isPublicPortalRoute && !isPublicAppRoute) {
+        console.log(`[proxy] Redirecting unauthenticated user to /${locale}/login`);
+        const redirectUrl = new URL(`/${locale}/login`, req.url);
+        const redirectRes = NextResponse.redirect(redirectUrl);
+
+        // CRITICAL: Propagate locale and cookies to the redirect response
+        redirectRes.headers.set('x-next-intl-locale', locale);
+        response.cookies.getAll().forEach(c => redirectRes.cookies.set(c.name, c.value));
+        return redirectRes;
     }
 
-    // Handle authenticated users on auth pages
+    // Authenticated User on Auth Page Handling
     if (isLoggedIn && isAuthPage) {
-        const localeMatch = pathname.match(/^\/([a-z]{2})(?:\/|$)/);
-        const locale = localeMatch ? localeMatch[1] : 'en';
-        console.log(`[proxy] Authenticated user on auth page, redirecting to /${locale}`);
-        return NextResponse.redirect(new URL(`/${locale}`, req.url));
+        console.log(`[proxy] Redirecting authenticated user to /${locale}`);
+        const redirectUrl = new URL(`/${locale}`, req.url);
+        const redirectRes = NextResponse.redirect(redirectUrl);
+
+        // CRITICAL: Propagate locale and cookies to the redirect response
+        redirectRes.headers.set('x-next-intl-locale', locale);
+        response.cookies.getAll().forEach(c => redirectRes.cookies.set(c.name, c.value));
+        return redirectRes;
     }
 
-    // 4. Apply Security Headers to the final response
-    // NOTE: Temporarily disabling CSP to rule out script blocking issues
+    // 7. Apply Security Headers
     Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
-        if (key !== "Content-Security-Policy") {
+        if (key !== "Content-Security-Policy") { // Keeping CSP disabled for debug
             response.headers.set(key, value);
         }
     });
