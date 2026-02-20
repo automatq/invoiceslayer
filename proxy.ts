@@ -1,13 +1,8 @@
 import NextAuth from "next-auth";
 import authConfig from "./auth.config";
 import { NextResponse } from "next/server";
-import createMiddleware from 'next-intl/middleware';
-import { routing } from './i18n/routing';
 
 const { auth } = NextAuth(authConfig);
-
-// Create i18n middleware
-const intlMiddleware = createMiddleware(routing);
 
 const SECURITY_HEADERS = {
     "X-Frame-Options": "DENY",
@@ -35,30 +30,12 @@ export default auth((req) => {
     const { pathname } = req.nextUrl;
     const isLoggedIn = !!req.auth;
 
-    // 1. Handle Auth APIs (MUST NOT be localized)
+    // 1. Handle Auth APIs
     if (pathname.startsWith("/api/auth")) {
         return;
     }
 
-    // 2. Extract locale for manual propagation
-    // This ensures that even if intlMiddleware fails to set headers (e.g. on redirects),
-    // we have a fallback for the rendering layer.
-    const localeMatch = pathname.match(/^\/([a-z]{2})(?:\/|$)/);
-    const locale = localeMatch ? localeMatch[1] : 'en';
-
-    // 3. Apply i18n middleware
-    const response = intlMiddleware(req);
-
-    // Manually ensure the locale header is present for the rendering layer
-    response.headers.set('x-next-intl-locale', locale);
-
-    // 4. If intlMiddleware wants a redirect (e.g. adding missing locale), honor it
-    if (response.status >= 300 && response.status < 400) {
-        console.log(`[proxy] i18n redirect to ${response.headers.get('location')}`);
-        return response;
-    }
-
-    // 5. Cron Protection
+    // 2. Cron Protection
     if (CRON_ROUTES.some((route) => pathname.includes(route))) {
         const cronSecret = process.env.CRON_SECRET;
         const authHeader = req.headers.get("authorization");
@@ -67,40 +44,28 @@ export default auth((req) => {
         }
     }
 
-    // 6. Route Protection Logic
+    // 3. Route Protection Logic
     const isAuthPage = AUTH_PAGES.some((page) => pathname.includes(page));
     const isPublicPortalRoute = PUBLIC_PORTAL_ROUTES.some((route) => pathname.includes(route));
     const isPublicAppRoute = PUBLIC_APP_ROUTES.some((route) => pathname.includes(route));
 
     // Protected Route Handling
     if (!isLoggedIn && !isAuthPage && !isPublicPortalRoute && !isPublicAppRoute) {
-        console.log(`[proxy] Redirecting unauthenticated user to /${locale}/login`);
-        const redirectUrl = new URL(`/${locale}/login`, req.url);
-        const redirectRes = NextResponse.redirect(redirectUrl);
-
-        // CRITICAL: Propagate locale and cookies to the redirect response
-        redirectRes.headers.set('x-next-intl-locale', locale);
-        response.cookies.getAll().forEach(c => redirectRes.cookies.set(c.name, c.value));
-        return redirectRes;
+        console.log(`[proxy] Redirecting unauthenticated user to /login`);
+        return NextResponse.redirect(new URL(`/login`, req.url));
     }
 
     // Authenticated User on Auth Page Handling
     if (isLoggedIn && isAuthPage) {
-        console.log(`[proxy] Redirecting authenticated user to /${locale}`);
-        const redirectUrl = new URL(`/${locale}`, req.url);
-        const redirectRes = NextResponse.redirect(redirectUrl);
-
-        // CRITICAL: Propagate locale and cookies to the redirect response
-        redirectRes.headers.set('x-next-intl-locale', locale);
-        response.cookies.getAll().forEach(c => redirectRes.cookies.set(c.name, c.value));
-        return redirectRes;
+        console.log(`[proxy] Redirecting authenticated user to /`);
+        return NextResponse.redirect(new URL(`/`, req.url));
     }
 
-    // 7. Apply Security Headers
+    const response = NextResponse.next();
+
+    // 4. Apply Security Headers
     Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
-        if (key !== "Content-Security-Policy") { // Keeping CSP disabled for debug
-            response.headers.set(key, value);
-        }
+        response.headers.set(key, value);
     });
 
     return response;

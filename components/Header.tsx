@@ -1,7 +1,6 @@
 import { Notifications } from "@/components/Notifications";
 import { UserButton } from "./UserButton";
 import { SearchTrigger } from "./SearchTrigger";
-import { LanguageSwitcher } from "./LanguageSwitcher";
 
 export function Header() {
     return (
@@ -10,7 +9,6 @@ export function Header() {
                 <SearchTrigger />
             </div>
             <div className="flex items-center gap-4">
-                <LanguageSwitcher />
                 <Notifications />
                 <UserButton />
             </div>
