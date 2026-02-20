@@ -30,13 +30,13 @@ if [ ! -f "$DB_FILE" ]; then
     # Run Prisma migrations to set up the schema
     echo "📊 Running database migrations..."
     cd /app
-    npx prisma migrate deploy --schema=./prisma/schema.prisma || {
+    npx prisma migrate deploy || {
         echo "⚠️  Migration failed, attempting to generate client anyway..."
     }
     
     # Generate Prisma client
     echo "🔨 Generating Prisma client..."
-    npx prisma generate --schema=./prisma/schema.prisma || {
+    npx prisma generate || {
         echo "⚠️  Prisma generate failed, client may already exist"
     }
     
