@@ -193,7 +193,7 @@ const InvoiceItemSchema = z.object({
 
 const InvoiceSchema = z.object({
     clientId: z.string().min(1, "Client is required"),
-    projectId: z.string().optional(),
+    projectId: z.string().optional().transform(v => v === "" ? undefined : v),
     date: z.date(),
     dueDate: z.date(),
     items: z.array(InvoiceItemSchema),

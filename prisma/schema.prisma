@@ -229,6 +229,8 @@ model InvoiceItem {
   quantity    Int
   unitPrice   Float
   amount      Float
+  taxRate     Float   @default(0)
+  taxAmount   Float   @default(0)
   invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }
 
@@ -239,6 +241,8 @@ model QuoteItem {
   quantity    Int
   unitPrice   Float
   amount      Float
+  taxRate     Float  @default(0)
+  taxAmount   Float  @default(0)
   quote       Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
 }
 

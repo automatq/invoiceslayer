@@ -24,7 +24,7 @@ const QuoteItemSchema = z.object({
 
 const QuoteSchema = z.object({
     clientId: z.string().min(1, "Client is required"),
-    projectId: z.string().optional(),
+    projectId: z.string().optional().transform(v => v === "" ? undefined : v),
     date: z.date(),
     expiryDate: z.date(),
     items: z.array(QuoteItemSchema).min(1, "At least one item is required"),
