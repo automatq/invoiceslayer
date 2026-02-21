@@ -21,9 +21,11 @@ interface ClientFormProps {
         vatNumber: string | null;
         photo: string | null;
     };
+    searchParams?: { [key: string]: string | string[] | undefined };
 }
 
-export function ClientForm({ initialData }: ClientFormProps) {
+export function ClientForm({ initialData, searchParams }: ClientFormProps) {
+    const prefilledName = searchParams?.name ? (searchParams.name as string) : "";
     const router = useRouter();
     const [errors, setErrors] = useState<Record<string, string[]>>({});
     const [globalError, setGlobalError] = useState<string>("");
@@ -156,7 +158,7 @@ export function ClientForm({ initialData }: ClientFormProps) {
                         <Input
                             id="name"
                             name="name"
-                            defaultValue={initialData?.name}
+                            defaultValue={initialData?.name || prefilledName}
                             placeholder="Acme Corp"
                             required
                         />

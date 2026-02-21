@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default function NewClientPage() {
+export default function NewClientPage({ searchParams }: { searchParams: { [key: string]: string | string[] | undefined } }) {
     return (
         <div className="max-w-4xl mx-auto w-full">
             <div className="flex items-center gap-4 mb-6">
@@ -21,7 +21,7 @@ export default function NewClientPage() {
                     </p>
                 </div>
             </div>
-            <ClientForm />
+            <ClientForm searchParams={searchParams} />
         </div>
     );
 }
