@@ -85,20 +85,6 @@ export function DashboardClientLayout({
             ),
         },
         {
-            label: "Goals",
-            href: "/budget?tab=goals",
-            icon: (
-                <Target className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-            ),
-        },
-        {
-            label: "Allocations",
-            href: "/budget?tab=allocation",
-            icon: (
-                <Coins className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-            ),
-        },
-        {
             label: "Expenses",
             href: "/expenses",
             icon: (
