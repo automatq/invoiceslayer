@@ -24,8 +24,12 @@ const chartConfig = {
         color: "oklch(0.55 0.15 250)",
     },
     pipeline: {
-        label: "Pipeline",
+        label: "Pipeline (Total)",
         color: "oklch(0.6 0.18 300)",
+    },
+    weighted: {
+        label: "Weighted Forecast",
+        color: "oklch(0.7 0.2 320)",
     },
 } satisfies ChartConfig
 
@@ -35,6 +39,7 @@ interface OverviewData {
     projected?: number;
     quotes: number;
     pipeline?: number;
+    weighted?: number;
 }
 
 export function Overview({ data }: { data: OverviewData[] }) {
@@ -81,16 +86,16 @@ export function Overview({ data }: { data: OverviewData[] }) {
                             stopOpacity={0.05}
                         />
                     </linearGradient>
-                    <linearGradient id="fillPipeline" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id="fillWeighted" x1="0" y1="0" x2="0" y2="1">
                         <stop
                             offset="5%"
-                            stopColor="var(--color-pipeline)"
-                            stopOpacity={0.6}
+                            stopColor="var(--color-weighted)"
+                            stopOpacity={0.7}
                         />
                         <stop
                             offset="95%"
-                            stopColor="var(--color-pipeline)"
-                            stopOpacity={0.02}
+                            stopColor="var(--color-weighted)"
+                            stopOpacity={0.05}
                         />
                     </linearGradient>
                 </defs>
@@ -131,11 +136,20 @@ export function Overview({ data }: { data: OverviewData[] }) {
                     <Area
                         dataKey="pipeline"
                         type="natural"
-                        fill="url(#fillPipeline)"
+                        fill="transparent"
                         stroke="var(--color-pipeline)"
                         strokeWidth={2}
-                        strokeDasharray="3 3"
-                        stackId="b"
+                        strokeDasharray="5 5"
+                    />
+                )}
+                {data.some(d => d.weighted && d.weighted > 0) && (
+                    <Area
+                        dataKey="weighted"
+                        type="natural"
+                        fill="url(#fillWeighted)"
+                        stroke="var(--color-weighted)"
+                        strokeWidth={2}
+                        stackId="a"
                     />
                 )}
                 <Area

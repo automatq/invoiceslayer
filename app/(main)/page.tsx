@@ -69,6 +69,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     }, 0);
 
     const monthPipeline = pipelineForecast[index]?.pipelineValue || 0;
+    const monthWeighted = pipelineForecast[index]?.weightedForecast || 0;
 
     return {
       name: monthData.name,
@@ -76,6 +77,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       projected: monthData.projected,
       quotes: monthQuotes,
       pipeline: monthPipeline,
+      weighted: monthWeighted,
     };
   });
 
