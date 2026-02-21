@@ -55,14 +55,13 @@ export function InteractiveLink({
             {!isSubtle && (
                 <>
                     {/* Spinning Gradient Border */}
-                    <div className="absolute top-1/2 left-1/2 -z-10 h-[500%] w-[500%] -translate-x-1/2 -translate-y-1/2 animate-spin-around [background:conic-gradient(transparent_0deg,transparent_300deg,var(--shimmer-color)_360deg)] opacity-100" />
+                    <div className="absolute top-1/2 left-1/2 -z-20 h-[500%] w-[500%] -translate-x-1/2 -translate-y-1/2 [background:conic-gradient(transparent_0deg,transparent_300deg,var(--shimmer-color)_360deg)] opacity-0 group-hover:opacity-100 group-hover:animate-spin-around transition-opacity duration-300 pointer-events-none" />
 
-                    {/* Backdrop - now at z-0 to ensure it's on top of background but behind text */}
+                    {/* Backdrop */}
                     <div
                         className={cn(
-                            "absolute inset-[1.5px] z-0 rounded-[calc(var(--radius)-1.5px)] bg-slate-950 dark:bg-black",
-                            "transition-colors duration-300 group-hover:bg-slate-900 dark:group-hover:bg-zinc-900",
-                            "border border-white/20 dark:border-white/10 shadow-lg"
+                            "absolute inset-[1.5px] -z-10 rounded-[calc(var(--radius)-1.5px)] pointer-events-none bg-inherit",
+                            "transition-colors duration-300 group-hover:brightness-110 shadow-lg"
                         )}
                     />
                 </>

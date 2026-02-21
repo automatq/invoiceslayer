@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react"
-import { Slot } from "@radix-ui/react-slot"
+import { Slot, Slottable } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { motion, AnimatePresence } from "framer-motion"
 import { Loader2, Check } from "lucide-react"
@@ -61,20 +61,6 @@ function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  if (asChild) {
-    return (
-      <Slot
-        data-slot="button"
-        data-variant={variant}
-        data-size={size}
-        className={cn(buttonVariants({ variant, size, className }))}
-        {...props}
-      >
-        {children}
-      </Slot>
-    )
-  }
-
   const {
     onClick,
     onDrag,
@@ -90,13 +76,58 @@ function Button({
   const isCalendar = (props as any)["data-day"] !== undefined;
   const isSubtle = isIcon || isGhost;
 
+  const commonClasses = cn(
+    buttonVariants({ variant, size, className }),
+    "group transition-all duration-300",
+    !isSubtle && !isCalendar && "border border-white/10 dark:border-white/20 shadow-lg shadow-black/20"
+  );
+
+  if (asChild) {
+    return (
+      <Slot
+        data-slot="button"
+        data-variant={variant}
+        data-size={size}
+        className={commonClasses}
+        style={{
+          "--shimmer-color": "#ffffff",
+          "--speed": "3s"
+        } as React.CSSProperties}
+        {...props}
+      >
+        <div className="flex items-center gap-2 relative z-20">
+          <Slottable>{children}</Slottable>
+        </div>
+        {/* Premium Shimmer Effect - Only for non-subtle, non-calendar buttons */}
+        {!isSubtle && !isCalendar && (
+          <>
+            <div
+              className="absolute top-1/2 left-1/2 -z-20 h-[500%] w-[500%] -translate-x-1/2 -translate-y-1/2 [background:conic-gradient(transparent_0deg,transparent_300deg,var(--shimmer-color)_360deg)] opacity-0 group-hover:opacity-100 group-hover:animate-spin-around transition-opacity duration-300 pointer-events-none"
+            />
+            <div
+              className={cn(
+                "absolute inset-[1.5px] -z-10 rounded-[calc(var(--radius)-1.5px)] pointer-events-none bg-inherit",
+                "transition-colors duration-300 group-hover:brightness-110 shadow-lg"
+              )}
+            />
+          </>
+        )}
+      </Slot>
+    )
+  }
+
+
   return (
     <motion.button
       data-slot="button"
       data-variant={variant}
       data-size={size}
       disabled={disabled || loading}
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={commonClasses}
+      style={{
+        "--shimmer-color": "#ffffff",
+        "--speed": "3s"
+      } as React.CSSProperties}
       whileTap={isCalendar ? {} : { scale: 0.95 }}
       whileHover={
         isCalendar
@@ -105,10 +136,6 @@ function Button({
             ? { scale: 1.1 }
             : {
               scale: 1.05,
-              boxShadow: `0 0 20px 2px color-mix(in srgb, ${variant === "destructive"
-                ? "var(--destructive)"
-                : "var(--primary)"
-                }, transparent 70%)`,
               filter: "brightness(1.1)",
             }
       }
@@ -116,16 +143,21 @@ function Button({
       onClick={onClick}
       {...buttonProps}
     >
-      {/* Shimmer Effect - Only for non-subtle, non-calendar buttons */}
+      {/* Premium Shimmer Effect - Only for non-subtle, non-calendar buttons */}
       {!isSubtle && !isCalendar && (
-        <motion.div
-          className="absolute inset-0 -z-10"
-          initial={{ x: "-100%", opacity: 0 }}
-          whileHover={{ x: "100%", opacity: 1 }}
-          transition={{ duration: 0.6, ease: "easeInOut" }}
-        >
-          <div className="h-full w-full bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12" />
-        </motion.div>
+        <>
+          {/* Spinning Shimmer Effect */}
+          <div
+            className="absolute top-1/2 left-1/2 -z-20 h-[500%] w-[500%] -translate-x-1/2 -translate-y-1/2 [background:conic-gradient(transparent_0deg,transparent_300deg,var(--shimmer-color)_360deg)] opacity-0 group-hover:opacity-100 group-hover:animate-spin-around transition-opacity duration-300 pointer-events-none"
+          />
+          {/* Backdrop Layer */}
+          <div
+            className={cn(
+              "absolute inset-[1.5px] -z-10 rounded-[calc(var(--radius)-1.5px)] pointer-events-none bg-inherit",
+              "transition-colors duration-300 group-hover:brightness-110 shadow-lg"
+            )}
+          />
+        </>
       )}
 
       <AnimatePresence mode="wait">
@@ -135,7 +167,7 @@ function Button({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 relative z-20"
           >
             <Check className="size-4" />
             <span>Success</span>
@@ -146,7 +178,7 @@ function Button({
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 relative z-20"
           >
             <Loader2 className="size-4 animate-spin" />
             <span>Loading...</span>
@@ -154,7 +186,7 @@ function Button({
         ) : (
           <motion.div
             key="content"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 relative z-20"
           >
             {children}
           </motion.div>
