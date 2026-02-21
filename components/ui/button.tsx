@@ -78,7 +78,7 @@ function Button({
 
   const commonClasses = cn(
     buttonVariants({ variant, size, className }),
-    "group transition-all duration-300",
+    "group transition-all duration-300 relative",
     !isSubtle && !isCalendar && "border border-white/10 dark:border-white/20 shadow-lg shadow-black/20"
   );
 
@@ -95,23 +95,7 @@ function Button({
         } as React.CSSProperties}
         {...props}
       >
-        <div className="flex items-center gap-2 relative z-20">
-          <Slottable>{children}</Slottable>
-        </div>
-        {/* Premium Shimmer Effect - Only for non-subtle, non-calendar buttons */}
-        {!isSubtle && !isCalendar && (
-          <>
-            <div
-              className="absolute top-1/2 left-1/2 -z-20 h-[500%] w-[500%] -translate-x-1/2 -translate-y-1/2 [background:conic-gradient(transparent_0deg,transparent_300deg,var(--shimmer-color)_360deg)] opacity-0 group-hover:opacity-100 group-hover:animate-spin-around transition-opacity duration-300 pointer-events-none"
-            />
-            <div
-              className={cn(
-                "absolute inset-[1.5px] -z-10 rounded-[calc(var(--radius)-1.5px)] pointer-events-none bg-inherit",
-                "transition-colors duration-300 group-hover:brightness-110 shadow-lg"
-              )}
-            />
-          </>
-        )}
+        {children}
       </Slot>
     )
   }

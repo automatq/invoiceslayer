@@ -77,9 +77,7 @@ export const InteractiveButton = React.forwardRef<HTMLButtonElement, Interactive
                 style={commonStyle}
                 {...(props as any)}
             >
-                <Slottable>{children}</Slottable>
-                {loadingSpinner}
-                {decorations}
+                {children}
             </Slot>
         );
     }
@@ -102,8 +100,10 @@ export const InteractiveButton = React.forwardRef<HTMLButtonElement, Interactive
             disabled={disabled || loading}
             {...(props as any)}
         >
-            <Slottable>{children}</Slottable>
-            {loadingSpinner}
+            <div className="flex items-center gap-2 relative z-20">
+                {children}
+                {loadingSpinner}
+            </div>
             {decorations}
         </motion.button>
     );
