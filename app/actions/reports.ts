@@ -290,20 +290,27 @@ export async function getPipelineForecastByMonth(year: number = new Date().getFu
         where: {
             userId,
             status: { in: ["OPEN", "WON"] },
-            // If we want a strict forecast, we keep the date filter. 
-            // But for the user to see "their deals" we might want to show them somewhere.
-            // Let's keep the year filter if date exists, otherwise fallback to current month if it's open?
-            // Actually, let's just use expectedClose if it's in the year, otherwise ignore for the time chart.
-            expectedClose: { gte: startDate, lt: endDate },
         },
         include: {
             stage: true,
         },
     });
 
+    const currentMonth = new Date().getMonth();
+
     deals.forEach((deal: any) => {
-        if (deal.expectedClose && deal.stage) {
-            const month = deal.expectedClose.getMonth();
+        let month = -1;
+        if (deal.expectedClose) {
+            const date = new Date(deal.expectedClose);
+            if (date.getFullYear() === year) {
+                month = date.getMonth();
+            }
+        } else if (deal.status === "OPEN") {
+            // Fallback for open deals without a date: show in current month
+            month = currentMonth;
+        }
+
+        if (month !== -1) {
             monthlyData[month].pipelineValue += deal.value;
             monthlyData[month].weightedForecast += deal.value * ((deal.stage.probability || 0) / 100);
             monthlyData[month].expectedClose += 1;

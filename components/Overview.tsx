@@ -121,13 +121,6 @@ export function Overview({ data }: { data: OverviewData[] }) {
                     content={
                         <ChartTooltipContent
                             indicator="dot"
-                            formatter={(value, name) => (
-                                <div className="flex items-center gap-1">
-                                    <span className="font-mono font-medium">
-                                        ${Number(value).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                                    </span>
-                                </div>
-                            )}
                         />
                     }
                 />
@@ -149,16 +142,14 @@ export function Overview({ data }: { data: OverviewData[] }) {
                     strokeDasharray="5 5"
                     stackId="a"
                 />
-                {data.some(d => d.weighted && d.weighted > 0) && (
-                    <Area
-                        dataKey="weighted"
-                        type="natural"
-                        fill="url(#fillWeighted)"
-                        stroke="var(--color-weighted)"
-                        strokeWidth={2}
-                        stackId="a"
-                    />
-                )}
+                <Area
+                    dataKey="weighted"
+                    type="natural"
+                    fill="url(#fillWeighted)"
+                    stroke="var(--color-weighted)"
+                    strokeWidth={2}
+                    stackId="a"
+                />
                 <Area
                     dataKey="quotes"
                     type="natural"
@@ -167,16 +158,14 @@ export function Overview({ data }: { data: OverviewData[] }) {
                     strokeWidth={2}
                     stackId="a"
                 />
-                {data.some(d => d.pipeline && d.pipeline > 0) && (
-                    <Area
-                        dataKey="pipeline"
-                        type="natural"
-                        fill="transparent"
-                        stroke="var(--color-pipeline)"
-                        strokeWidth={2}
-                        strokeDasharray="8 4"
-                    />
-                )}
+                <Area
+                    dataKey="pipeline"
+                    type="natural"
+                    fill="transparent"
+                    stroke="var(--color-pipeline)"
+                    strokeWidth={2}
+                    strokeDasharray="8 4"
+                />
             </AreaChart>
         </ChartContainer>
     )

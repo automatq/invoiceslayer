@@ -282,7 +282,7 @@ export async function moveDeal(dealId: string, stageId: string) {
             where: { id: dealId },
             data: {
                 stageId,
-                status: newStage.probability === 100 ? "WON" : newStage.probability === 0 ? "LOST" : deal.status,
+                status: newStage.probability === 100 ? "WON" : newStage.probability === 0 ? "LOST" : "OPEN",
                 activities: {
                     create: {
                         type: "STAGE_CHANGE",
@@ -298,8 +298,8 @@ export async function moveDeal(dealId: string, stageId: string) {
             },
         });
 
-        // Update client metrics if deal is won
-        if (newStage.probability === 100) {
+        // Update client metrics if deal status changes
+        if (newStage.probability === 100 && deal.status !== "WON") {
             await prisma.client.update({
                 where: { id: deal.clientId },
                 data: {
@@ -315,7 +315,15 @@ export async function moveDeal(dealId: string, stageId: string) {
                 link: `/pipeline`,
                 userId,
             });
-        } else if (newStage.probability === 0) {
+        } else if (deal.status === "WON" && newStage.probability !== 100) {
+            // Moved away from WON
+            await prisma.client.update({
+                where: { id: deal.clientId },
+                data: {
+                    totalDealValue: { decrement: deal.value },
+                },
+            });
+        } else if (newStage.probability === 0 && deal.status !== "LOST") {
             // Create notification for lost deal
             await createNotification({
                 type: "WARNING",
