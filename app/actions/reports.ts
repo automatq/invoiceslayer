@@ -79,7 +79,7 @@ export async function getRevenueByMonth(year: number = new Date().getFullYear(),
             if (checkDate >= now && checkDate >= startDate) {
                 const month = checkDate.getMonth();
                 monthlyData[month].projected += totalPerRun;
-                monthlyData[month].revenue += totalPerRun;
+                // DO NOT add to revenue here, keep it separate for the chart to stack
             }
             projectedRuns++;
             if (template.frequency === "WEEKLY") checkDate.setDate(checkDate.getDate() + 7);
@@ -289,6 +289,11 @@ export async function getPipelineForecastByMonth(year: number = new Date().getFu
     const deals = await prisma.deal.findMany({
         where: {
             userId,
+            status: { in: ["OPEN", "WON"] },
+            // If we want a strict forecast, we keep the date filter. 
+            // But for the user to see "their deals" we might want to show them somewhere.
+            // Let's keep the year filter if date exists, otherwise fallback to current month if it's open?
+            // Actually, let's just use expectedClose if it's in the year, otherwise ignore for the time chart.
             expectedClose: { gte: startDate, lt: endDate },
         },
         include: {
@@ -297,10 +302,10 @@ export async function getPipelineForecastByMonth(year: number = new Date().getFu
     });
 
     deals.forEach((deal: any) => {
-        if (deal.expectedClose) {
+        if (deal.expectedClose && deal.stage) {
             const month = deal.expectedClose.getMonth();
             monthlyData[month].pipelineValue += deal.value;
-            monthlyData[month].weightedForecast += deal.value * (deal.stage.probability / 100);
+            monthlyData[month].weightedForecast += deal.value * ((deal.stage.probability || 0) / 100);
             monthlyData[month].expectedClose += 1;
         }
     });

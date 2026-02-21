@@ -132,16 +132,23 @@ export function Overview({ data }: { data: OverviewData[] }) {
                     }
                 />
                 <Legend verticalAlign="top" height={36} />
-                {data.some(d => d.pipeline && d.pipeline > 0) && (
-                    <Area
-                        dataKey="pipeline"
-                        type="natural"
-                        fill="transparent"
-                        stroke="var(--color-pipeline)"
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                    />
-                )}
+                <Area
+                    dataKey="revenue"
+                    type="natural"
+                    fill="url(#fillRevenue)"
+                    stroke="var(--color-revenue)"
+                    strokeWidth={2}
+                    stackId="a"
+                />
+                <Area
+                    dataKey="projected"
+                    type="natural"
+                    fill="url(#fillProjected)"
+                    stroke="var(--color-projected)"
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    stackId="a"
+                />
                 {data.some(d => d.weighted && d.weighted > 0) && (
                     <Area
                         dataKey="weighted"
@@ -160,23 +167,16 @@ export function Overview({ data }: { data: OverviewData[] }) {
                     strokeWidth={2}
                     stackId="a"
                 />
-                <Area
-                    dataKey="projected"
-                    type="natural"
-                    fill="url(#fillProjected)"
-                    stroke="var(--color-projected)"
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    stackId="a"
-                />
-                <Area
-                    dataKey="revenue"
-                    type="natural"
-                    fill="url(#fillRevenue)"
-                    stroke="var(--color-revenue)"
-                    strokeWidth={2}
-                    stackId="a"
-                />
+                {data.some(d => d.pipeline && d.pipeline > 0) && (
+                    <Area
+                        dataKey="pipeline"
+                        type="natural"
+                        fill="transparent"
+                        stroke="var(--color-pipeline)"
+                        strokeWidth={2}
+                        strokeDasharray="8 4"
+                    />
+                )}
             </AreaChart>
         </ChartContainer>
     )
