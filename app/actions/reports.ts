@@ -237,7 +237,7 @@ export async function getPipelineMetrics() {
         });
     });
 
-    const winRate = totalDeals > 0 ? (wonDeals / (wonDeals + lostDeals)) * 100 : 0;
+    const winRate = (wonDeals + lostDeals) > 0 ? (wonDeals / (wonDeals + lostDeals)) * 100 : 0;
 
     return {
         totalPipelineValue,
