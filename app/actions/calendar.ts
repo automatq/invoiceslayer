@@ -7,7 +7,7 @@ export type CalendarEvent = {
     id: string;
     title: string;
     date: Date;
-    type: "INVOICE" | "QUOTE" | "RECURRING" | "PAYMENT" | "EXPENSE";
+    type: "INVOICE" | "QUOTE" | "RECURRING" | "PAYMENT" | "EXPENSE" | "DEAL";
     amount?: number;
     status?: string;
 };
@@ -18,7 +18,7 @@ export async function getCalendarEvents(date: Date): Promise<CalendarEvent[]> {
         if (!session?.user?.id) return [];
         const userId = session.user.id;
 
-        const [invoices, quotes, recurring, payments, expenses] = await Promise.all([
+        const [invoices, quotes, recurring, payments, expenses, deals] = await Promise.all([
             prisma.invoice.findMany({
                 where: { userId },
                 select: { id: true, number: true, dueDate: true, total: true, status: true, client: { select: { name: true } } },
@@ -38,6 +38,10 @@ export async function getCalendarEvents(date: Date): Promise<CalendarEvent[]> {
             prisma.expense.findMany({
                 where: { userId },
                 select: { id: true, description: true, amount: true, date: true, category: true },
+            }),
+            prisma.deal.findMany({
+                where: { userId, expectedClose: { not: null } },
+                select: { id: true, title: true, expectedClose: true, value: true, status: true },
             }),
         ]);
 
@@ -95,6 +99,17 @@ export async function getCalendarEvents(date: Date): Promise<CalendarEvent[]> {
                 date: exp.date,
                 type: "EXPENSE",
                 amount: exp.amount
+            });
+        });
+
+        deals.forEach((deal: any) => {
+            events.push({
+                id: deal.id,
+                title: `Deal: ${deal.title}`,
+                date: deal.expectedClose,
+                type: "DEAL",
+                amount: deal.value,
+                status: deal.status
             });
         });
 

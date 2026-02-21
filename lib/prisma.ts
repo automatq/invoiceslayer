@@ -12,7 +12,6 @@ const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;
 
 let adapter;
 
-// Only use Turso in production or if explicitly forced
 if (isProduction && tursoUrl && tursoUrl.includes("turso.io")) {
     adapter = new PrismaLibSql({
         url: tursoUrl,

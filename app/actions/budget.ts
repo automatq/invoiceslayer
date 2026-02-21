@@ -5,22 +5,11 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
 
-import { auth as clerkAuth } from "@clerk/nextjs/server";
+
 
 async function getRequiredSession() {
     const session = await auth();
-
-    let clerkUserId: string | null = null;
-    if (process.env.CLERK_SECRET_KEY) {
-        try {
-            const clerkRes = await clerkAuth();
-            clerkUserId = clerkRes.userId;
-        } catch (e) {
-            console.error("Clerk auth error:", e);
-        }
-    }
-
-    const userId = clerkUserId || session?.user?.id;
+    const userId = session?.user?.id;
     if (!userId) {
         throw new Error("Unauthorized");
     }

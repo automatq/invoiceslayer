@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { createInvoiceFromDeal, createQuoteFromDeal } from "@/app/actions/deal-invoice-integration";
+import { deleteDeal } from "@/app/actions/deals";
 
 interface Invoice {
     id: string;
@@ -73,6 +74,7 @@ export function DealCard({ deal, stageColor, draggable, onDragStart }: DealCardP
     const router = useRouter();
     const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
     const [isCreatingQuote, setIsCreatingQuote] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const formatDate = (date: Date | null) => {
         if (!date) return null;
@@ -140,6 +142,26 @@ export function DealCard({ deal, stageColor, draggable, onDragStart }: DealCardP
         }
     };
 
+    const handleDelete = async () => {
+        if (!confirm("Are you sure you want to delete this deal?")) return;
+        setIsDeleting(true);
+        try {
+            const result = await deleteDeal(deal.id);
+            if (result.success) {
+                toast.success("Deal deleted");
+                router.refresh();
+            } else {
+                toast.error("Failed to delete deal", {
+                    description: result.message,
+                });
+            }
+        } catch (error) {
+            toast.error("Error deleting deal");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     return (
         <Card
             className="cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow"
@@ -193,7 +215,16 @@ export function DealCard({ deal, stageColor, draggable, onDragStart }: DealCardP
                                 {isCreatingInvoice ? "Creating..." : "Create Invoice"}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
+                            <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete();
+                                }}
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? "Deleting..." : "Delete"}
+                            </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>

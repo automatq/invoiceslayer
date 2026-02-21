@@ -46,7 +46,6 @@ interface OnboardingWizardProps {
     isCloudDeployment: boolean;
     googleEnabled: boolean;
     githubEnabled: boolean;
-    isClerkEnabled: boolean;
     hasSettings?: boolean;
 }
 
@@ -228,12 +227,9 @@ function SetupChecklist({ isCloud }: { isCloud: boolean }) {
     );
 }
 
-export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabled, isClerkEnabled, hasSettings }: OnboardingWizardProps) {
+export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabled, hasSettings }: OnboardingWizardProps) {
     const router = useRouter();
-    const { user, status: authStatus, isClerk } = useAuth();
-    const nextAuthStatus = authStatus === "authenticated" ? "authenticated" : (authStatus === "loading" ? "loading" : "unauthenticated");
-    const clerkUser = isClerk ? user : null;
-    const clerkLoaded = true; // Handled by useAuth internally
+    const { user, status: authStatus } = useAuth();
     const [mounted, setMounted] = useState(false);
 
     // Use sessionStorage to persist step across refreshes during the onboarding process
@@ -344,16 +340,11 @@ export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabl
         try {
             const result = await registerUser(data);
             if (result.success) {
-                toast.success("Account created! Please sign in.");
-                // After successful registration, lead to login or auto-signin if possible
-                // For simplicity, we trigger a sign-in directly
-                await signIn("credentials", {
-                    email: data.email,
-                    password: data.password,
-                    callbackUrl: "/onboarding",
-                });
+                toast.success("Account created! Redirecting...");
+            } else if (result.error) {
+                toast.error(result.error);
             } else {
-                toast.error(result.error || "Failed to create account");
+                toast.error("Failed to create account");
             }
         } catch (error) {
             console.error(error);
@@ -404,8 +395,8 @@ export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabl
 
     if (!mounted) return null; // Avoid hydration mismatch
 
-    const showOAuth = isCloudDeployment && (googleEnabled || githubEnabled) && !isClerkEnabled;
-    const loginLink = isClerkEnabled ? "/sign-in" : "/login";
+    const showOAuth = isCloudDeployment && (googleEnabled || githubEnabled);
+    const loginLink = "/login";
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-neutral-950 p-4 font-sans selection:bg-primary/30">

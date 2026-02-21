@@ -1,5 +1,4 @@
 import { Notifications } from "@/components/Notifications";
-import { UserButton } from "./UserButton";
 import { SearchTrigger } from "./SearchTrigger";
 
 export function Header() {
@@ -10,7 +9,6 @@ export function Header() {
             </div>
             <div className="flex items-center gap-4">
                 <Notifications />
-                <UserButton />
             </div>
         </header>
     );

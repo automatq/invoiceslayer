@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { StageColumn } from "./StageColumn";
 import { DealCard } from "./DealCard";
 import { CreateDealDialog } from "./CreateDealDialog";
+import { DealDetailsSheet } from "./DealDetailsSheet";
 import { Button } from "@/components/ui/button";
 import { Plus, TrendingUp } from "lucide-react";
 import { moveDeal } from "@/app/actions/deals";
@@ -68,9 +70,19 @@ interface PipelineBoardProps {
 }
 
 export function PipelineBoard({ pipeline }: PipelineBoardProps) {
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const [stages, setStages] = useState<Stage[]>(pipeline.stages);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
+
+    const dealId = searchParams.get("deal");
+
+    const closeDetails = () => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("deal");
+        router.push(`/pipeline?${params.toString()}`);
+    };
 
     // Sync local state when server data changes (e.g., after creating a deal)
     useEffect(() => {
@@ -183,6 +195,11 @@ export function PipelineBoard({ pipeline }: PipelineBoardProps) {
                 stages={stages}
                 defaultStageId={selectedStageId}
                 pipelineId={pipeline.id}
+            />
+
+            <DealDetailsSheet
+                dealId={dealId}
+                onClose={closeDetails}
             />
         </div>
     );

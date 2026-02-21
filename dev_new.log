@@ -1,0 +1,112 @@
+
+> invoiceslayer@0.1.0 dev
+> next dev -H localhost
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://localhost:3000
+- Environments: .env
+
+✓ Starting...
+✓ Ready in 818ms
+ GET /api/auth/session 404 in 1910ms (compile: 1673ms, proxy.ts: 102ms, render: 134ms)
+ GET /login 200 in 1119ms (compile: 1031ms, proxy.ts: 5ms, render: 83ms)
+prisma:query SELECT `main`.`Setting`.`id`, `main`.`Setting`.`userId`, `main`.`Setting`.`teamId`, `main`.`Setting`.`companyName`, `main`.`Setting`.`companyEmail`, `main`.`Setting`.`companyAddress`, `main`.`Setting`.`companyPhone`, `main`.`Setting`.`companyLogo`, `main`.`Setting`.`companyWebsite`, `main`.`Setting`.`companyTaxId`, `main`.`Setting`.`paymentInstructions`, `main`.`Setting`.`currency`, `main`.`Setting`.`defaultTaxRate`, `main`.`Setting`.`invoiceTemplate`, `main`.`Setting`.`quoteTemplate`, `main`.`Setting`.`resendApiKey`, `main`.`Setting`.`stripePublishableKey`, `main`.`Setting`.`stripeSecretKey`, `main`.`Setting`.`cryptoWalletAddress`, `main`.`Setting`.`agentApiKey`, `main`.`Setting`.`localAiUrl`, `main`.`Setting`.`localAiModel`, `main`.`Setting`.`createdAt`, `main`.`Setting`.`updatedAt` FROM `main`.`Setting` WHERE (`main`.`Setting`.`userId` = ? AND 1=1) LIMIT ? OFFSET ?
+ GET /onboarding 200 in 943ms (compile: 704ms, proxy.ts: 5ms, render: 235ms)
+ POST /onboarding 200 in 19ms (compile: 2ms, proxy.ts: 5ms, render: 11ms)
+prisma:query SELECT `main`.`User`.`id`, `main`.`User`.`name`, `main`.`User`.`email`, `main`.`User`.`emailVerified`, `main`.`User`.`image`, `main`.`User`.`password`, `main`.`User`.`createdAt`, `main`.`User`.`updatedAt` FROM `main`.`User` WHERE (`main`.`User`.`email` = ? AND 1=1) LIMIT ? OFFSET ?
+prisma:query INSERT INTO `main`.`User` (`id`, `name`, `email`, `password`, `createdAt`, `updatedAt`) VALUES (?,?,?,?,?,?) RETURNING `id` AS `id`, `name` AS `name`, `email` AS `email`, `emailVerified` AS `emailVerified`, `image` AS `image`, `password` AS `password`, `createdAt` AS `createdAt`, `updatedAt` AS `updatedAt`
+prisma:query SELECT `main`.`User`.`id`, `main`.`User`.`name`, `main`.`User`.`email`, `main`.`User`.`emailVerified`, `main`.`User`.`image`, `main`.`User`.`password`, `main`.`User`.`createdAt`, `main`.`User`.`updatedAt` FROM `main`.`User` WHERE (`main`.`User`.`email` = ? AND 1=1) LIMIT ? OFFSET ?
+[register] Error creating user: Error: NEXT_REDIRECT
+    at async register (app/actions/auth.ts:43:9)
+  41 |
+  42 |         // Automatically sign in the user after registration
+> 43 |         await signIn("credentials", {
+     |         ^
+  44 |             email,
+  45 |             password,
+  46 |             redirectTo: "/onboarding", {
+  digest: 'NEXT_REDIRECT;push;http://localhost:3000/onboarding;307;'
+}
+prisma:query SELECT `main`.`Setting`.`id`, `main`.`Setting`.`userId`, `main`.`Setting`.`teamId`, `main`.`Setting`.`companyName`, `main`.`Setting`.`companyEmail`, `main`.`Setting`.`companyAddress`, `main`.`Setting`.`companyPhone`, `main`.`Setting`.`companyLogo`, `main`.`Setting`.`companyWebsite`, `main`.`Setting`.`companyTaxId`, `main`.`Setting`.`paymentInstructions`, `main`.`Setting`.`currency`, `main`.`Setting`.`defaultTaxRate`, `main`.`Setting`.`invoiceTemplate`, `main`.`Setting`.`quoteTemplate`, `main`.`Setting`.`resendApiKey`, `main`.`Setting`.`stripePublishableKey`, `main`.`Setting`.`stripeSecretKey`, `main`.`Setting`.`cryptoWalletAddress`, `main`.`Setting`.`agentApiKey`, `main`.`Setting`.`localAiUrl`, `main`.`Setting`.`localAiModel`, `main`.`Setting`.`createdAt`, `main`.`Setting`.`updatedAt` FROM `main`.`Setting` WHERE (`main`.`Setting`.`userId` = ? AND 1=1) LIMIT ? OFFSET ?
+ POST /onboarding 200 in 440ms (compile: 3ms, proxy.ts: 7ms, render: 430ms)
+prisma:query SELECT `main`.`User`.`id`, `main`.`User`.`name`, `main`.`User`.`email`, `main`.`User`.`emailVerified`, `main`.`User`.`image`, `main`.`User`.`password`, `main`.`User`.`createdAt`, `main`.`User`.`updatedAt` FROM `main`.`User` WHERE (`main`.`User`.`email` = ? AND 1=1) LIMIT ? OFFSET ?
+ POST /onboarding 200 in 126ms (compile: 2ms, proxy.ts: 7ms, render: 117ms)
+prisma:query SELECT `main`.`Setting`.`id`, `main`.`Setting`.`userId`, `main`.`Setting`.`teamId`, `main`.`Setting`.`companyName`, `main`.`Setting`.`companyEmail`, `main`.`Setting`.`companyAddress`, `main`.`Setting`.`companyPhone`, `main`.`Setting`.`companyLogo`, `main`.`Setting`.`companyWebsite`, `main`.`Setting`.`companyTaxId`, `main`.`Setting`.`paymentInstructions`, `main`.`Setting`.`currency`, `main`.`Setting`.`defaultTaxRate`, `main`.`Setting`.`invoiceTemplate`, `main`.`Setting`.`quoteTemplate`, `main`.`Setting`.`resendApiKey`, `main`.`Setting`.`stripePublishableKey`, `main`.`Setting`.`stripeSecretKey`, `main`.`Setting`.`cryptoWalletAddress`, `main`.`Setting`.`agentApiKey`, `main`.`Setting`.`localAiUrl`, `main`.`Setting`.`localAiModel`, `main`.`Setting`.`createdAt`, `main`.`Setting`.`updatedAt` FROM `main`.`Setting` WHERE (`main`.`Setting`.`userId` = ? AND 1=1) LIMIT ? OFFSET ?
+ GET /onboarding 200 in 58ms (compile: 4ms, proxy.ts: 5ms, render: 49ms)
+ POST /onboarding 200 in 27ms (compile: 2ms, proxy.ts: 6ms, render: 19ms)
+prisma:query SELECT `main`.`Setting`.`id`, `main`.`Setting`.`userId`, `main`.`Setting`.`teamId`, `main`.`Setting`.`companyName`, `main`.`Setting`.`companyEmail`, `main`.`Setting`.`companyAddress`, `main`.`Setting`.`companyPhone`, `main`.`Setting`.`companyLogo`, `main`.`Setting`.`companyWebsite`, `main`.`Setting`.`companyTaxId`, `main`.`Setting`.`paymentInstructions`, `main`.`Setting`.`currency`, `main`.`Setting`.`defaultTaxRate`, `main`.`Setting`.`invoiceTemplate`, `main`.`Setting`.`quoteTemplate`, `main`.`Setting`.`resendApiKey`, `main`.`Setting`.`stripePublishableKey`, `main`.`Setting`.`stripeSecretKey`, `main`.`Setting`.`cryptoWalletAddress`, `main`.`Setting`.`agentApiKey`, `main`.`Setting`.`localAiUrl`, `main`.`Setting`.`localAiModel`, `main`.`Setting`.`createdAt`, `main`.`Setting`.`updatedAt` FROM `main`.`Setting` WHERE (`main`.`Setting`.`userId` = ? AND 1=1) LIMIT ? OFFSET ?
+ GET /onboarding 200 in 61ms (compile: 7ms, proxy.ts: 6ms, render: 48ms)
+ POST /onboarding 200 in 12ms (compile: 3ms, proxy.ts: 6ms, render: 4ms)
+prisma:query SELECT `main`.`User`.`id`, `main`.`User`.`name`, `main`.`User`.`email`, `main`.`User`.`emailVerified`, `main`.`User`.`image`, `main`.`User`.`password`, `main`.`User`.`createdAt`, `main`.`User`.`updatedAt` FROM `main`.`User` WHERE (`main`.`User`.`email` = ? AND 1=1) LIMIT ? OFFSET ?
+prisma:query INSERT INTO `main`.`User` (`id`, `name`, `email`, `password`, `createdAt`, `updatedAt`) VALUES (?,?,?,?,?,?) RETURNING `id` AS `id`, `name` AS `name`, `email` AS `email`, `emailVerified` AS `emailVerified`, `image` AS `image`, `password` AS `password`, `createdAt` AS `createdAt`, `updatedAt` AS `updatedAt`
+prisma:query SELECT `main`.`User`.`id`, `main`.`User`.`name`, `main`.`User`.`email`, `main`.`User`.`emailVerified`, `main`.`User`.`image`, `main`.`User`.`password`, `main`.`User`.`createdAt`, `main`.`User`.`updatedAt` FROM `main`.`User` WHERE (`main`.`User`.`email` = ? AND 1=1) LIMIT ? OFFSET ?
+[register] Error creating user: Error: NEXT_REDIRECT
+    at async register (app/actions/auth.ts:43:9)
+  41 |
+  42 |         // Automatically sign in the user after registration
+> 43 |         await signIn("credentials", {
+     |         ^
+  44 |             email,
+  45 |             password,
+  46 |             redirectTo: "/onboarding", {
+  digest: 'NEXT_REDIRECT;push;http://localhost:3000/onboarding;307;'
+}
+prisma:query SELECT `main`.`Setting`.`id`, `main`.`Setting`.`userId`, `main`.`Setting`.`teamId`, `main`.`Setting`.`companyName`, `main`.`Setting`.`companyEmail`, `main`.`Setting`.`companyAddress`, `main`.`Setting`.`companyPhone`, `main`.`Setting`.`companyLogo`, `main`.`Setting`.`companyWebsite`, `main`.`Setting`.`companyTaxId`, `main`.`Setting`.`paymentInstructions`, `main`.`Setting`.`currency`, `main`.`Setting`.`defaultTaxRate`, `main`.`Setting`.`invoiceTemplate`, `main`.`Setting`.`quoteTemplate`, `main`.`Setting`.`resendApiKey`, `main`.`Setting`.`stripePublishableKey`, `main`.`Setting`.`stripeSecretKey`, `main`.`Setting`.`cryptoWalletAddress`, `main`.`Setting`.`agentApiKey`, `main`.`Setting`.`localAiUrl`, `main`.`Setting`.`localAiModel`, `main`.`Setting`.`createdAt`, `main`.`Setting`.`updatedAt` FROM `main`.`Setting` WHERE (`main`.`Setting`.`userId` = ? AND 1=1) LIMIT ? OFFSET ?
+ POST /onboarding 200 in 376ms (compile: 3ms, proxy.ts: 6ms, render: 367ms)
+prisma:query SELECT `main`.`User`.`id`, `main`.`User`.`name`, `main`.`User`.`email`, `main`.`User`.`emailVerified`, `main`.`User`.`image`, `main`.`User`.`password`, `main`.`User`.`createdAt`, `main`.`User`.`updatedAt` FROM `main`.`User` WHERE (`main`.`User`.`email` = ? AND 1=1) LIMIT ? OFFSET ?
+ POST /onboarding 200 in 88ms (compile: 4ms, proxy.ts: 6ms, render: 79ms)
+prisma:query SELECT `main`.`Setting`.`id`, `main`.`Setting`.`userId`, `main`.`Setting`.`teamId`, `main`.`Setting`.`companyName`, `main`.`Setting`.`companyEmail`, `main`.`Setting`.`companyAddress`, `main`.`Setting`.`companyPhone`, `main`.`Setting`.`companyLogo`, `main`.`Setting`.`companyWebsite`, `main`.`Setting`.`companyTaxId`, `main`.`Setting`.`paymentInstructions`, `main`.`Setting`.`currency`, `main`.`Setting`.`defaultTaxRate`, `main`.`Setting`.`invoiceTemplate`, `main`.`Setting`.`quoteTemplate`, `main`.`Setting`.`resendApiKey`, `main`.`Setting`.`stripePublishableKey`, `main`.`Setting`.`stripeSecretKey`, `main`.`Setting`.`cryptoWalletAddress`, `main`.`Setting`.`agentApiKey`, `main`.`Setting`.`localAiUrl`, `main`.`Setting`.`localAiModel`, `main`.`Setting`.`createdAt`, `main`.`Setting`.`updatedAt` FROM `main`.`Setting` WHERE (`main`.`Setting`.`userId` = ? AND 1=1) LIMIT ? OFFSET ?
+ GET /onboarding 200 in 51ms (compile: 2ms, proxy.ts: 5ms, render: 44ms)
+ POST /onboarding 200 in 14ms (compile: 5ms, proxy.ts: 4ms, render: 4ms)
+prisma:query SELECT `main`.`User`.`id`, `main`.`User`.`name`, `main`.`User`.`email`, `main`.`User`.`emailVerified`, `main`.`User`.`image`, `main`.`User`.`password`, `main`.`User`.`createdAt`, `main`.`User`.`updatedAt` FROM `main`.`User` WHERE (`main`.`User`.`email` = ? AND 1=1) LIMIT ? OFFSET ?
+ POST /onboarding 200 in 92ms (compile: 3ms, proxy.ts: 6ms, render: 84ms)
+ GET /login 200 in 41ms (compile: 5ms, proxy.ts: 4ms, render: 32ms)
+ POST /login 200 in 17ms (compile: 3ms, proxy.ts: 10ms, render: 4ms)
+ GET /login/SignIn_clerk_catchall_check_1771634314044 404 in 40ms (compile: 7ms, proxy.ts: 6ms, render: 27ms)
+prisma:query SELECT `main`.`Setting`.`id`, `main`.`Setting`.`userId`, `main`.`Setting`.`teamId`, `main`.`Setting`.`companyName`, `main`.`Setting`.`companyEmail`, `main`.`Setting`.`companyAddress`, `main`.`Setting`.`companyPhone`, `main`.`Setting`.`companyLogo`, `main`.`Setting`.`companyWebsite`, `main`.`Setting`.`companyTaxId`, `main`.`Setting`.`paymentInstructions`, `main`.`Setting`.`currency`, `main`.`Setting`.`defaultTaxRate`, `main`.`Setting`.`invoiceTemplate`, `main`.`Setting`.`quoteTemplate`, `main`.`Setting`.`resendApiKey`, `main`.`Setting`.`stripePublishableKey`, `main`.`Setting`.`stripeSecretKey`, `main`.`Setting`.`cryptoWalletAddress`, `main`.`Setting`.`agentApiKey`, `main`.`Setting`.`localAiUrl`, `main`.`Setting`.`localAiModel`, `main`.`Setting`.`createdAt`, `main`.`Setting`.`updatedAt` FROM `main`.`Setting` WHERE (`main`.`Setting`.`userId` = ? AND 1=1) LIMIT ? OFFSET ?
+ GET /onboarding 200 in 51ms (compile: 3ms, proxy.ts: 5ms, render: 44ms)
+ POST /onboarding 200 in 14ms (compile: 4ms, proxy.ts: 4ms, render: 6ms)
+prisma:query SELECT `main`.`User`.`id`, `main`.`User`.`name`, `main`.`User`.`email`, `main`.`User`.`emailVerified`, `main`.`User`.`image`, `main`.`User`.`password`, `main`.`User`.`createdAt`, `main`.`User`.`updatedAt` FROM `main`.`User` WHERE (`main`.`User`.`email` = ? AND 1=1) LIMIT ? OFFSET ?
+ POST /onboarding 200 in 85ms (compile: 3ms, proxy.ts: 3ms, render: 79ms)
+prisma:query SELECT `main`.`User`.`id`, `main`.`User`.`name`, `main`.`User`.`email`, `main`.`User`.`emailVerified`, `main`.`User`.`image`, `main`.`User`.`password`, `main`.`User`.`createdAt`, `main`.`User`.`updatedAt` FROM `main`.`User` WHERE (`main`.`User`.`email` = ? AND 1=1) LIMIT ? OFFSET ?
+ POST /onboarding 200 in 85ms (compile: 2ms, proxy.ts: 4ms, render: 78ms)
+ GET /login 200 in 37ms (compile: 2ms, proxy.ts: 4ms, render: 30ms)
+ POST /login 200 in 14ms (compile: 3ms, proxy.ts: 8ms, render: 4ms)
+ GET /login/SignIn_clerk_catchall_check_1771634363400 404 in 42ms (compile: 12ms, proxy.ts: 7ms, render: 22ms)
+ GET /login 200 in 32ms (compile: 2ms, proxy.ts: 4ms, render: 26ms)
+ POST /login 200 in 13ms (compile: 3ms, proxy.ts: 7ms, render: 3ms)
+ GET /login/SignIn_clerk_catchall_check_1771634370380 404 in 47ms (compile: 6ms, proxy.ts: 9ms, render: 32ms)
+prisma:query SELECT `main`.`Setting`.`id`, `main`.`Setting`.`userId`, `main`.`Setting`.`teamId`, `main`.`Setting`.`companyName`, `main`.`Setting`.`companyEmail`, `main`.`Setting`.`companyAddress`, `main`.`Setting`.`companyPhone`, `main`.`Setting`.`companyLogo`, `main`.`Setting`.`companyWebsite`, `main`.`Setting`.`companyTaxId`, `main`.`Setting`.`paymentInstructions`, `main`.`Setting`.`currency`, `main`.`Setting`.`defaultTaxRate`, `main`.`Setting`.`invoiceTemplate`, `main`.`Setting`.`quoteTemplate`, `main`.`Setting`.`resendApiKey`, `main`.`Setting`.`stripePublishableKey`, `main`.`Setting`.`stripeSecretKey`, `main`.`Setting`.`cryptoWalletAddress`, `main`.`Setting`.`agentApiKey`, `main`.`Setting`.`localAiUrl`, `main`.`Setting`.`localAiModel`, `main`.`Setting`.`createdAt`, `main`.`Setting`.`updatedAt` FROM `main`.`Setting` WHERE (`main`.`Setting`.`userId` = ? AND 1=1) LIMIT ? OFFSET ?
+ GET /onboarding 200 in 52ms (compile: 2ms, proxy.ts: 4ms, render: 46ms)
+ POST /onboarding 200 in 18ms (compile: 1958µs, proxy.ts: 8ms, render: 8ms)
+prisma:query SELECT `main`.`User`.`id`, `main`.`User`.`name`, `main`.`User`.`email`, `main`.`User`.`emailVerified`, `main`.`User`.`image`, `main`.`User`.`password`, `main`.`User`.`createdAt`, `main`.`User`.`updatedAt` FROM `main`.`User` WHERE (`main`.`User`.`email` = ? AND 1=1) LIMIT ? OFFSET ?
+prisma:query INSERT INTO `main`.`User` (`id`, `name`, `email`, `password`, `createdAt`, `updatedAt`) VALUES (?,?,?,?,?,?) RETURNING `id` AS `id`, `name` AS `name`, `email` AS `email`, `emailVerified` AS `emailVerified`, `image` AS `image`, `password` AS `password`, `createdAt` AS `createdAt`, `updatedAt` AS `updatedAt`
+prisma:query SELECT `main`.`User`.`id`, `main`.`User`.`name`, `main`.`User`.`email`, `main`.`User`.`emailVerified`, `main`.`User`.`image`, `main`.`User`.`password`, `main`.`User`.`createdAt`, `main`.`User`.`updatedAt` FROM `main`.`User` WHERE (`main`.`User`.`email` = ? AND 1=1) LIMIT ? OFFSET ?
+[register] Error creating user: Error: NEXT_REDIRECT
+    at async register (app/actions/auth.ts:43:9)
+  41 |
+  42 |         // Automatically sign in the user after registration
+> 43 |         await signIn("credentials", {
+     |         ^
+  44 |             email,
+  45 |             password,
+  46 |             redirectTo: "/onboarding", {
+  digest: 'NEXT_REDIRECT;push;http://localhost:3000/onboarding;307;'
+}
+prisma:query SELECT `main`.`Setting`.`id`, `main`.`Setting`.`userId`, `main`.`Setting`.`teamId`, `main`.`Setting`.`companyName`, `main`.`Setting`.`companyEmail`, `main`.`Setting`.`companyAddress`, `main`.`Setting`.`companyPhone`, `main`.`Setting`.`companyLogo`, `main`.`Setting`.`companyWebsite`, `main`.`Setting`.`companyTaxId`, `main`.`Setting`.`paymentInstructions`, `main`.`Setting`.`currency`, `main`.`Setting`.`defaultTaxRate`, `main`.`Setting`.`invoiceTemplate`, `main`.`Setting`.`quoteTemplate`, `main`.`Setting`.`resendApiKey`, `main`.`Setting`.`stripePublishableKey`, `main`.`Setting`.`stripeSecretKey`, `main`.`Setting`.`cryptoWalletAddress`, `main`.`Setting`.`agentApiKey`, `main`.`Setting`.`localAiUrl`, `main`.`Setting`.`localAiModel`, `main`.`Setting`.`createdAt`, `main`.`Setting`.`updatedAt` FROM `main`.`Setting` WHERE (`main`.`Setting`.`userId` = ? AND 1=1) LIMIT ? OFFSET ?
+ POST /onboarding 200 in 396ms (compile: 3ms, proxy.ts: 4ms, render: 389ms)
+ GET /login 200 in 55ms (compile: 6ms, proxy.ts: 7ms, render: 43ms)
+ POST /login 200 in 16ms (compile: 3ms, proxy.ts: 8ms, render: 4ms)
+ GET /login/SignIn_clerk_catchall_check_1771634438675 404 in 29ms (compile: 3ms, proxy.ts: 5ms, render: 22ms)
+prisma:query SELECT `main`.`Setting`.`id`, `main`.`Setting`.`userId`, `main`.`Setting`.`teamId`, `main`.`Setting`.`companyName`, `main`.`Setting`.`companyEmail`, `main`.`Setting`.`companyAddress`, `main`.`Setting`.`companyPhone`, `main`.`Setting`.`companyLogo`, `main`.`Setting`.`companyWebsite`, `main`.`Setting`.`companyTaxId`, `main`.`Setting`.`paymentInstructions`, `main`.`Setting`.`currency`, `main`.`Setting`.`defaultTaxRate`, `main`.`Setting`.`invoiceTemplate`, `main`.`Setting`.`quoteTemplate`, `main`.`Setting`.`resendApiKey`, `main`.`Setting`.`stripePublishableKey`, `main`.`Setting`.`stripeSecretKey`, `main`.`Setting`.`cryptoWalletAddress`, `main`.`Setting`.`agentApiKey`, `main`.`Setting`.`localAiUrl`, `main`.`Setting`.`localAiModel`, `main`.`Setting`.`createdAt`, `main`.`Setting`.`updatedAt` FROM `main`.`Setting` WHERE (`main`.`Setting`.`userId` = ? AND 1=1) LIMIT ? OFFSET ?
+ GET /onboarding 200 in 47ms (compile: 3ms, proxy.ts: 5ms, render: 39ms)
+ POST /onboarding 200 in 11ms (compile: 1851µs, proxy.ts: 5ms, render: 5ms)
+ GET /login 200 in 36ms (compile: 3ms, proxy.ts: 4ms, render: 30ms)
+ POST /login 200 in 13ms (compile: 2ms, proxy.ts: 7ms, render: 4ms)
+ GET /login/SignIn_clerk_catchall_check_1771634508196 404 in 36ms (compile: 7ms, proxy.ts: 5ms, render: 23ms)
+prisma:query SELECT `main`.`Setting`.`id`, `main`.`Setting`.`userId`, `main`.`Setting`.`teamId`, `main`.`Setting`.`companyName`, `main`.`Setting`.`companyEmail`, `main`.`Setting`.`companyAddress`, `main`.`Setting`.`companyPhone`, `main`.`Setting`.`companyLogo`, `main`.`Setting`.`companyWebsite`, `main`.`Setting`.`companyTaxId`, `main`.`Setting`.`paymentInstructions`, `main`.`Setting`.`currency`, `main`.`Setting`.`defaultTaxRate`, `main`.`Setting`.`invoiceTemplate`, `main`.`Setting`.`quoteTemplate`, `main`.`Setting`.`resendApiKey`, `main`.`Setting`.`stripePublishableKey`, `main`.`Setting`.`stripeSecretKey`, `main`.`Setting`.`cryptoWalletAddress`, `main`.`Setting`.`agentApiKey`, `main`.`Setting`.`localAiUrl`, `main`.`Setting`.`localAiModel`, `main`.`Setting`.`createdAt`, `main`.`Setting`.`updatedAt` FROM `main`.`Setting` WHERE (`main`.`Setting`.`userId` = ? AND 1=1) LIMIT ? OFFSET ?
+ GET /onboarding 200 in 49ms (compile: 2ms, proxy.ts: 4ms, render: 43ms)
+ POST /onboarding 200 in 18ms (compile: 2ms, proxy.ts: 7ms, render: 10ms)
+prisma:query SELECT `main`.`User`.`id`, `main`.`User`.`name`, `main`.`User`.`email`, `main`.`User`.`emailVerified`, `main`.`User`.`image`, `main`.`User`.`password`, `main`.`User`.`createdAt`, `main`.`User`.`updatedAt` FROM `main`.`User` WHERE (`main`.`User`.`email` = ? AND 1=1) LIMIT ? OFFSET ?
+ POST /onboarding 200 in 88ms (compile: 3ms, proxy.ts: 5ms, render: 80ms)

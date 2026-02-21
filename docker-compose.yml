@@ -1,5 +1,3 @@
-version: "3"
-
 services:
   invoiceslayer:
     container_name: invoiceslayer
@@ -13,6 +11,7 @@ services:
       - AUTH_SECRET=${AUTH_SECRET:-your-generated-secret-min-32-chars-long}
       - AUTH_TRUST_HOST=true
       - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
       # Optional: Add these for cloud features
       # - AUTH_GOOGLE_ID=${AUTH_GOOGLE_ID:-}
       # - AUTH_GOOGLE_SECRET=${AUTH_GOOGLE_SECRET:-}
@@ -26,7 +25,7 @@ services:
     volumes:
       - invoiceslayer-data:/app/data
     healthcheck:
-      test: [ "CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health > /dev/null || exit 1" ]
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:3000/api/health > /dev/null || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 3

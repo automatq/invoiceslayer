@@ -6,6 +6,17 @@ import { z } from "zod";
 import { signIn } from "@/lib/auth";
 import { AuthError } from "next-auth";
 
+/**
+ * Check if an error is a Next.js redirect error
+ * These errors should be re-thrown so Next.js can handle the redirect
+ */
+function isRedirectError(error: any): boolean {
+    return !!(
+        error &&
+        typeof error === "object" &&
+        (error.digest?.startsWith("NEXT_REDIRECT") || error.message === "NEXT_REDIRECT")
+    );
+}
 const RegisterSchema = z.object({
     email: z.string().email(),
     password: z.string().min(6),
@@ -48,6 +59,7 @@ export async function register(formData: z.infer<typeof RegisterSchema>) {
 
         return { success: "User created!" };
     } catch (e) {
+        if (isRedirectError(e)) throw e;
         if (e instanceof AuthError) {
             return { error: "Something went wrong during sign in." };
         }
@@ -64,6 +76,7 @@ export async function login(formData: { email: string; password: string }) {
             redirectTo: "/",
         });
     } catch (error) {
+        if (isRedirectError(error)) throw error;
         if (error instanceof AuthError) {
             switch (error.type) {
                 case "CredentialsSignin":
