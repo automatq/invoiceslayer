@@ -99,3 +99,17 @@ export async function deleteExpense(id: string) {
         return { success: false, message: "Failed to delete expense" };
     }
 }
+
+export async function getExpenseCategories() {
+    const { userId } = await getRequiredSession();
+    try {
+        const expenses = await db.expense.groupBy({
+            where: { userId },
+            by: ['category'],
+        });
+        return expenses.map(e => e.category);
+    } catch (error) {
+        console.error("Failed to fetch expense categories:", error);
+        return [];
+    }
+}
