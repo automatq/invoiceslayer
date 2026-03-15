@@ -8,20 +8,23 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
+COPY packages ./packages
 COPY prisma ./prisma
+COPY prisma.config.ts ./
 RUN npm ci
 
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages ./packages
 COPY . .
 
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line in case you want to disable telemetry during the build.
-# ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_TELEMETRY_DISABLED=1
 
+RUN npx prisma generate
 RUN npm run build
 
 # Production image, copy all the files and run next
@@ -29,8 +32,7 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-# Uncomment the following line in case you want to disable telemetry during runtime.
-# ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Install openssl for Prisma in production
 RUN apk add --no-cache openssl
@@ -41,7 +43,7 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 
 # Set the correct permission for prerender cache and data
-RUN mkdir .next data
+RUN mkdir -p .next data
 RUN chown nextjs:nodejs .next data
 
 # Automatically leverage output traces to reduce image size
@@ -49,31 +51,17 @@ RUN chown nextjs:nodejs .next data
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy Prisma schema and migrations for runtime usage
+# Copy Prisma schema and config for runtime
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-# Copy config files needed for Prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./
 
-# Copy local node_modules from deps stage to ensure npx prisma works for migrations
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=deps --chown=nextjs:nodejs /app/package.json ./package.json
-
-# Ensure nextjs user can write to node_modules/prisma for client generation
-# This must be done as root before switching users
-USER root
-RUN chmod -R u+w node_modules
-USER nextjs
-
-EXPOSE 3000
-
-ENV PORT=3000
-
-# Copy startup script for database initialization
+# Copy startup script
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-start.sh ./docker-start.sh
 RUN chmod +x ./docker-start.sh
 
-# We need to run migrations before starting the app.
-# The startup script handles database initialization for fresh deployments
-# and ensures the Prisma client is ready.
+USER nextjs
+
+EXPOSE 3000
+ENV PORT=3000
 
 CMD ["./docker-start.sh"]
