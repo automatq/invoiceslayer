@@ -1,52 +1,27 @@
-import NextAuth from "next-auth";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { prisma } from "@/lib/prisma";
-import authConfig from "@/auth.config";
-import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
-import { z } from "zod";
+import { auth as clerkAuth, currentUser } from "@clerk/nextjs/server";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-    adapter: PrismaAdapter(prisma),
-    session: { strategy: "jwt" },
-    ...authConfig,
-    providers: [
-        ...authConfig.providers,
-        Credentials({
-            name: "Credentials",
-            credentials: {
-                email: { label: "Email", type: "email" },
-                password: { label: "Password", type: "password" },
-            },
-            async authorize(credentials) {
-                const parsedCredentials = z
-                    .object({ email: z.string().email(), password: z.string().min(6) })
-                    .safeParse(credentials);
+/**
+ * Drop-in replacement for next-auth's auth().
+ * Returns a session-like object with { user: { id, name, email, image } }
+ * so existing server actions don't need to change their auth pattern.
+ */
+export async function auth() {
+  const { userId } = await clerkAuth();
 
-                if (parsedCredentials.success) {
-                    const { email, password } = parsedCredentials.data;
-                    const user = await prisma.user.findUnique({ where: { email } });
-                    if (!user || !user.password) return null;
+  if (!userId) {
+    return null;
+  }
 
-                    const passwordsMatch = await bcrypt.compare(password, user.password);
+  const user = await currentUser();
 
-                    if (passwordsMatch) return user;
-                }
-
-                return null;
-            },
-        }),
-    ],
-    callbacks: {
-        authorized: authConfig.callbacks?.authorized,
-        async session({ session, token }) {
-            if (token.sub && session.user) {
-                session.user.id = token.sub;
-            }
-            return session;
-        },
-        async jwt({ token }) {
-            return token;
-        },
+  return {
+    user: {
+      id: userId,
+      name: user?.firstName
+        ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ""}`
+        : null,
+      email: user?.emailAddresses?.[0]?.emailAddress ?? null,
+      image: user?.imageUrl ?? null,
     },
-});
+  };
+}

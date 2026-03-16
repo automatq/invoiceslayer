@@ -58,6 +58,7 @@ export async function createSettings(data: SettingsFormValues) {
             await prisma.user.create({
                 data: {
                     id: userId,
+                    clerkId: userId,
                     email,
                     name,
                 }

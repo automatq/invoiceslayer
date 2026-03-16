@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { createSettings } from "@/app/actions/settings";
-import { register as registerUser } from "@/app/actions/auth";
+import { SignUp } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
@@ -17,9 +17,7 @@ import { CheckCircle2, ArrowRight, Server, Cloud, Mail, CreditCard, Bot, Zap, Ch
 import Link from "next/link";
 import { InteractiveButton } from "@/components/ui/interactive-button";
 import { Button } from "@/components/ui/button";
-import { signIn } from "next-auth/react";
 import { useAuth } from "@/hooks/use-auth";
-import { SocialLogins } from "@/components/SocialLogins";
 
 const SettingsSchema = z.object({
     companyName: z.string().min(1, "Company name is required"),
@@ -322,38 +320,6 @@ export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabl
         },
     });
 
-    const {
-        register: registerReg,
-        handleSubmit: handleSubmitReg,
-        formState: { errors: errorsReg },
-    } = useForm<RegistrationFormValues>({
-        resolver: zodResolver(RegistrationSchema),
-        defaultValues: {
-            name: "",
-            email: "",
-            password: "",
-        },
-    });
-
-    const onRegisterSubmit = async (data: RegistrationFormValues) => {
-        setIsSubmitting(true);
-        try {
-            const result = await registerUser(data);
-            if (result.success) {
-                toast.success("Account created! Redirecting...");
-            } else if (result.error) {
-                toast.error(result.error);
-            } else {
-                toast.error("Failed to create account");
-            }
-        } catch (error) {
-            console.error(error);
-            toast.error("An unexpected error occurred during registration");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
     const onBeginSetup = () => {
         if (isLoggedIn) {
             setStep(2);
@@ -482,41 +448,18 @@ export function OnboardingWizard({ isCloudDeployment, googleEnabled, githubEnabl
                             </CardDescription>
                         </CardHeader>
 
-                        {showOAuth ? (
-                            <CardContent className="p-8 space-y-6">
-                                <SocialLogins googleEnabled={googleEnabled} githubEnabled={githubEnabled} />
-                                <div className="text-center text-xs text-white/30 font-bold uppercase tracking-widest mt-4">
-                                    Secure cloud authentication enabled
-                                </div>
+                        {!isLoggedIn ? (
+                            <CardContent className="p-8 flex justify-center">
+                                <SignUp fallbackRedirectUrl="/onboarding" />
                             </CardContent>
                         ) : (
-                            <form onSubmit={handleSubmitReg(onRegisterSubmit)}>
-                                <CardContent className="space-y-4 p-8">
-                                    <div className="space-y-2 group">
-                                        <Label className="text-[10px] uppercase tracking-[0.4em] font-black text-white/30 group-focus-within:text-purple-400 transition-colors ml-1">Full Name</Label>
-                                        <Input {...registerReg("name")} placeholder="JOHN DOE" className="h-14 bg-white/[0.03] border-white/10 text-white rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all font-black" />
-                                        {errorsReg.name && <p className="text-[10px] uppercase font-black text-red-500 mt-1 ml-1">{errorsReg.name.message}</p>}
-                                    </div>
-                                    <div className="space-y-2 group">
-                                        <Label className="text-[10px] uppercase tracking-[0.4em] font-black text-white/30 group-focus-within:text-purple-400 transition-colors ml-1">Admin Email</Label>
-                                        <Input type="email" {...registerReg("email")} placeholder="ADMIN@EXAMPLE.COM" className="h-14 bg-white/[0.03] border-white/10 text-white rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all font-black" />
-                                        {errorsReg.email && <p className="text-[10px] uppercase font-black text-red-500 mt-1 ml-1">{errorsReg.email.message}</p>}
-                                    </div>
-                                    <div className="space-y-2 group">
-                                        <Label className="text-[10px] uppercase tracking-[0.4em] font-black text-white/30 group-focus-within:text-purple-400 transition-colors ml-1">Password</Label>
-                                        <Input type="password" {...registerReg("password")} placeholder="••••••••" className="h-14 bg-white/[0.03] border-white/10 text-white rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all font-black" />
-                                        {errorsReg.password && <p className="text-[10px] uppercase font-black text-red-500 mt-1 ml-1">{errorsReg.password.message}</p>}
-                                    </div>
-
-                                    <Button type="submit" className="w-full h-16 mt-4 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl font-black italic uppercase tracking-tighter text-xl shadow-lg shadow-purple-500/20" disabled={isSubmitting}>
-                                        {isSubmitting ? "CREATING..." : "CREATE ACCOUNT"}
-                                        {!isSubmitting && <UserPlus className="ml-2 w-6 h-6" />}
-                                    </Button>
-                                </CardContent>
-                            </form>
+                            <CardContent className="p-8 text-center">
+                                <p className="text-white/50 font-bold">You&apos;re signed in. Continue to set up your profile.</p>
+                                <Button onClick={() => setStep(2)} className="mt-4">Continue</Button>
+                            </CardContent>
                         )}
                         <CardFooter className="justify-center pb-8 pt-0">
-                            <p className="text-xs font-bold text-white/30 italic">Already have an account? <Link href={loginLink} className="text-purple-400 hover:underline">Log In</Link></p>
+                            <p className="text-xs font-bold text-white/30 italic">Already have an account? <Link href="/sign-in" className="text-purple-400 hover:underline">Sign In</Link></p>
                         </CardFooter>
                     </Card>
                 )}

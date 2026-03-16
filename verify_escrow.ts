@@ -1,4 +1,4 @@
-import { prisma } from "./src/lib/prisma";
+import { prisma } from "./lib/prisma";
 
 async function verifyEscrowFlow() {
   console.log("Starting Smart Escrow Verification...");

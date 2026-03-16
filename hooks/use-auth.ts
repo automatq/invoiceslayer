@@ -1,28 +1,30 @@
 "use client";
 
-import { useSession, signOut as nextAuthSignOut } from "next-auth/react";
+import { useUser, useClerk } from "@clerk/nextjs";
 
 export function useAuth() {
-    const { data: session, status } = useSession();
+  const { user: clerkUser, isLoaded } = useUser();
+  const { signOut: clerkSignOut } = useClerk();
 
-    const isLoading = status === "loading";
+  const isLoading = !isLoaded;
 
-    const user = session?.user ? {
-        id: session.user.id,
-        name: session.user.name,
-        email: session.user.email,
-        image: session.user.image,
-    } : null;
+  const user = clerkUser
+    ? {
+        id: clerkUser.id,
+        name: clerkUser.fullName,
+        email: clerkUser.primaryEmailAddress?.emailAddress ?? null,
+        image: clerkUser.imageUrl ?? null,
+      }
+    : null;
 
-    const signOut = async (options?: { callbackUrl?: string }) => {
-        await nextAuthSignOut({ callbackUrl: options?.callbackUrl || "/login" });
-    };
+  const signOut = async (options?: { callbackUrl?: string }) => {
+    await clerkSignOut({ redirectUrl: options?.callbackUrl || "/sign-in" });
+  };
 
-    return {
-        user,
-        isLoading,
-        status,
-        signOut,
-        isClerk: false
-    };
+  return {
+    user,
+    isLoading,
+    status: isLoading ? "loading" : clerkUser ? "authenticated" : "unauthenticated",
+    signOut,
+  };
 }
